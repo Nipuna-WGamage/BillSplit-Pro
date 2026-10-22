@@ -42,6 +42,11 @@ input {
   font: inherit;
 }
 
+select,
+textarea {
+  font: inherit;
+}
+
 button,
 a {
   -webkit-tap-highlight-color: transparent;
@@ -130,6 +135,141 @@ input:focus-visible {
 .brand-mark span:nth-child(4) {
   background: #36845c;
   border-radius: 2px 5px 5px;
+}
+
+.account-controls {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 9px;
+}
+
+.account-email {
+  max-width: 190px;
+  overflow: hidden;
+  color: #6d7b70;
+  font-size: 9px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.account-controls button {
+  min-height: 30px;
+  border: 1px solid #e2e8e1;
+  border-radius: 6px;
+  background: #fff;
+  padding: 0 9px;
+  color: #526b57;
+  font-size: 9px;
+  cursor: pointer;
+}
+
+.account-controls button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.account-controls [role="alert"] {
+  color: #a34d3e;
+  font-size: 8px;
+}
+
+.auth-screen {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  background: #f6f8f5;
+  padding: 24px;
+}
+
+.auth-card {
+  width: min(100%, 410px);
+  border: 1px solid #e8ede7;
+  border-radius: 14px;
+  background: #fff;
+  padding: 30px;
+  box-shadow: 0 12px 34px rgb(35 55 39 / 6%);
+}
+
+.auth-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 34px;
+  color: #1e2922;
+  font-size: 17px;
+}
+
+.auth-brand > span:last-child {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.auth-brand em {
+  color: #4b946a;
+  font-style: normal;
+}
+
+.auth-card h1 {
+  margin: 8px 0 0;
+  color: #2e3b32;
+  font-size: 24px;
+  letter-spacing: -0.7px;
+}
+
+.auth-description {
+  margin: 8px 0 0;
+  color: #879188;
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.auth-form {
+  display: grid;
+  gap: 15px;
+  margin-top: 22px;
+}
+
+.auth-form .form-field > span:first-child {
+  font-size: 10px;
+}
+
+.auth-form input {
+  min-height: 41px;
+}
+
+.auth-submit {
+  min-height: 42px;
+  margin-top: 3px;
+}
+
+.auth-submit:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.auth-switch {
+  margin: 19px 0 0;
+  color: #7e8980;
+  font-size: 10px;
+  text-align: center;
+}
+
+.auth-switch a {
+  color: #34764f;
+  font-weight: 650;
+}
+
+.groups-empty {
+  grid-column: 1 / -1;
+  margin: 0;
+  border: 1px dashed #e2e8e1;
+  border-radius: 9px;
+  padding: 18px;
+  color: #879188;
+  font-size: 10px;
+  text-align: center;
 }
 
 .workspace-switcher {

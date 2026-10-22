@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState, type FormEvent } from "react";
+import { AccountControls } from "@/components/auth/account-controls";
 import { calculateGroupBalances } from "@/lib/balances";
 import { formatLkr } from "@/lib/expenses";
 import { ExpenseManagement } from "./expense-management";
@@ -17,13 +18,24 @@ function initials(name: string): string {
 }
 
 export function GroupDetailPage({ groupId }: { groupId: string }) {
-  const { groups, addMember, removeMember } = useGroups();
+  const {
+    groups,
+    addMember,
+    removeMember,
+    isLoading,
+    isSupabaseMode,
+    persistenceError,
+  } = useGroups();
   const group = groups.find((item) => item.id === groupId);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const groupName = group?.name ?? "";
+
+  if (isLoading) {
+    return <main className="groups-screen"><p role="status">Loading your saved workspace…</p></main>;
+  }
 
   if (!group) {
     return (
@@ -38,7 +50,8 @@ export function GroupDetailPage({ groupId }: { groupId: string }) {
         <section className="group-not-found">
           <span aria-hidden="true" className="group-not-found-icon">?</span>
           <h1>Group not found</h1>
-          <p>This demo group may have been reset when the page was refreshed.</p>
+          <p>{persistenceError || "This group is not part of your saved workspace."}</p>
+          {persistenceError ? <p className="form-error" role="alert">{persistenceError}</p> : null}
           <Link className="primary-action" href="/groups">Go to groups</Link>
         </section>
       </main>
@@ -51,12 +64,12 @@ export function GroupDetailPage({ groupId }: { groupId: string }) {
     group.settlements,
   );
 
-  function handleAddMember(event: FormEvent<HTMLFormElement>) {
+  async function handleAddMember(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError("");
     setNotice("");
 
-    const result = addMember(groupId, { name, email });
+    const result = await addMember(groupId, { name, email });
 
     if (!result.success) {
       setError(result.error);
@@ -68,10 +81,10 @@ export function GroupDetailPage({ groupId }: { groupId: string }) {
     setNotice(`${result.value.members.at(-1)?.name ?? "Member"} added to ${groupName}.`);
   }
 
-  function handleRemoveMember(memberId: string, memberName: string) {
+  async function handleRemoveMember(memberId: string, memberName: string) {
     setError("");
     setNotice("");
-    const result = removeMember(groupId, memberId);
+    const result = await removeMember(groupId, memberId);
 
     if (!result.success) {
       setError(result.error);
@@ -91,14 +104,24 @@ export function GroupDetailPage({ groupId }: { groupId: string }) {
         <Link className="groups-back-link" href="/groups">
           <span aria-hidden="true">←</span> All groups
         </Link>
+        <AccountControls />
       </header>
 
       <div className="groups-content group-detail-content">
-        <div className="demo-notice groups-demo-notice" role="note">
-          <span className="demo-indicator" />
-          <span><strong>Demo workspace</strong><span className="demo-separator">·</span>Changes are temporary and reset when you refresh.</span>
-          <span className="demo-tag">PREVIEW</span>
-        </div>
+        {isSupabaseMode ? (
+          <div className="demo-notice groups-demo-notice" role="note">
+            <span className="demo-indicator" />
+            <span><strong>Saved workspace</strong><span className="demo-separator">·</span>Changes are saved to your account.</span>
+            <span className="demo-tag">PRIVATE</span>
+          </div>
+        ) : (
+          <div className="demo-notice groups-demo-notice" role="note">
+            <span className="demo-indicator" />
+            <span><strong>Demo workspace</strong><span className="demo-separator">·</span>Changes are temporary and reset when you refresh.</span>
+            <span className="demo-tag">PREVIEW</span>
+          </div>
+        )}
+        {persistenceError ? <p className="form-error" role="alert">{persistenceError}</p> : null}
 
         <nav aria-label="Breadcrumb" className="group-breadcrumb">
           <Link href="/">Overview</Link>

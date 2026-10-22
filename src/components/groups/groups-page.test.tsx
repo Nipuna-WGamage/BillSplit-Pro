@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { GroupDetailPage } from "./group-detail-page";
 import { GroupProvider } from "./group-provider";
@@ -17,7 +17,7 @@ afterEach(() => {
 });
 
 describe("group management screens", () => {
-  it("creates a demo group and updates the list", () => {
+  it("creates a demo group and updates the list", async () => {
     render(
       <GroupProvider>
         <GroupsPage />
@@ -32,11 +32,13 @@ describe("group management screens", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: "Create demo group" }));
 
-    expect(screen.getByRole("heading", { name: "Groups & members" })).toBeTruthy();
-    expect(push).toHaveBeenCalledWith("/groups/kandy-flatmates");
+    await waitFor(() => {
+      expect(screen.getByRole("heading", { name: "Groups & members" })).toBeTruthy();
+      expect(push).toHaveBeenCalledWith("/groups/kandy-flatmates");
+    });
   });
 
-  it("adds a demo member and announces the change", () => {
+  it("adds a demo member and announces the change", async () => {
     render(
       <GroupProvider>
         <GroupDetailPage groupId="maple-house" />
@@ -52,17 +54,16 @@ describe("group management screens", () => {
     fireEvent.click(screen.getByRole("button", { name: /add demo member/i }));
 
     expect(
-      within(screen.getByRole("region", { name: /members/i })).getByText(
+      await within(screen.getByRole("region", { name: /members/i })).findByText(
         "Sam Fernando",
         { exact: true },
       ),
     ).toBeTruthy();
-    expect(screen.getByRole("status").textContent).toContain(
-      "Sam Fernando added to Maple House.",
-    );
+    expect(await screen.findByRole("status")).toBeTruthy();
+    expect(screen.getByRole("status").textContent).toContain("Sam Fernando added to Maple House.");
   });
 
-  it("prevents removing a member referenced by an expense", () => {
+  it("prevents removing a member referenced by an expense", async () => {
     render(
       <GroupProvider>
         <GroupDetailPage groupId="maple-house" />
@@ -71,8 +72,8 @@ describe("group management screens", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Remove Nimal Perera from Maple House" }));
 
-    expect(screen.getByText("nimal@example.test")).toBeTruthy();
-    expect(screen.getByRole("alert").textContent).toContain(
+    expect(await screen.findByText("nimal@example.test")).toBeTruthy();
+    expect((await screen.findByRole("alert")).textContent).toContain(
       "This member is referenced by an expense.",
     );
     expect(screen.queryByRole("button", { name: "Remove Nipun Perera from Maple House" })).toBeNull();
@@ -104,7 +105,7 @@ describe("group management screens", () => {
     expect(screen.getAllByText("LKR 2,112.50")).toHaveLength(4);
   });
 
-  it("records a partial payment and updates balances and payment history", () => {
+  it("records a partial payment and updates balances and payment history", async () => {
     render(
       <GroupProvider>
         <GroupDetailPage groupId="maple-house" />
@@ -122,6 +123,7 @@ describe("group management screens", () => {
     );
     fireEvent.click(screen.getByRole("button", { name: "Record demo settlement" }));
 
+    await screen.findByText("Settlement recorded in this demo.");
     const balancePanel = screen.getByRole("region", { name: "Member balances" });
     expect(within(balancePanel).getByText("Owed LKR 5,190.00")).toBeTruthy();
     expect(within(balancePanel).getByText("Owes LKR 3,060.00")).toBeTruthy();
@@ -131,7 +133,7 @@ describe("group management screens", () => {
     expect(screen.getByText("LKR 100.00")).toBeTruthy();
   });
 
-  it("allows undoing a settlement and recalculates group balances", () => {
+  it("allows undoing a settlement and recalculates group balances", async () => {
     render(
       <GroupProvider>
         <GroupDetailPage groupId="maple-house" />
@@ -146,18 +148,20 @@ describe("group management screens", () => {
       { target: { value: "100.00" } },
     );
     fireEvent.click(screen.getByRole("button", { name: "Record demo settlement" }));
+    await screen.findByRole("button", { name: "Remove settlement of LKR 100.00" });
     fireEvent.click(
       screen.getByRole("button", { name: "Remove settlement of LKR 100.00" }),
     );
     fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
 
+    await screen.findByText("Settlement removed from this demo and balances recalculated.");
     const balancePanel = screen.getByRole("region", { name: "Member balances" });
     expect(within(balancePanel).getByText("Owed LKR 5,290.00")).toBeTruthy();
     expect(within(balancePanel).getAllByText("Owes LKR 3,160.00")).toHaveLength(2);
     expect(screen.getByText("No demo payments recorded yet.")).toBeTruthy();
   });
 
-  it("protects expense history from edits after a settlement is recorded", () => {
+  it("protects expense history from edits after a settlement is recorded", async () => {
     render(
       <GroupProvider>
         <GroupDetailPage groupId="maple-house" />
@@ -172,6 +176,7 @@ describe("group management screens", () => {
       { target: { value: "100.00" } },
     );
     fireEvent.click(screen.getByRole("button", { name: "Record demo settlement" }));
+    await screen.findByText("Settlement recorded in this demo.");
     fireEvent.click(screen.getByRole("button", { name: "Edit Weekly groceries" }));
     fireEvent.change(
       within(screen.getByRole("region", { name: /expenses/i })).getByRole(
@@ -182,13 +187,13 @@ describe("group management screens", () => {
     );
     fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
 
-    expect(screen.getByRole("alert").textContent).toContain(
+    expect((await screen.findByRole("alert")).textContent).toContain(
       "Expenses cannot be edited after a settlement is recorded.",
     );
     expect(screen.getByText("LKR 8,450.00")).toBeTruthy();
   });
 
-  it("adds an expense with a payer and selected participants", () => {
+  it("adds an expense with a payer and selected participants", async () => {
     render(
       <GroupProvider>
         <GroupDetailPage groupId="maple-house" />
@@ -208,14 +213,12 @@ describe("group management screens", () => {
     fireEvent.click(screen.getByRole("checkbox", { name: "Nipun Perera" }));
     fireEvent.click(screen.getByRole("button", { name: "Add demo expense" }));
 
-    expect(screen.getByText("Shared cleaning supplies")).toBeTruthy();
-    expect(screen.getByRole("status").textContent).toContain(
-      "Expense added to this demo.",
-    );
+    expect(await screen.findByText("Shared cleaning supplies")).toBeTruthy();
+    expect(screen.getByRole("status").textContent).toContain("Expense added to this demo.");
     expect(screen.getAllByText("LKR 125.50")).toHaveLength(2);
   });
 
-  it("edits and confirms deletion of an expense", () => {
+  it("edits and confirms deletion of an expense", async () => {
     render(
       <GroupProvider>
         <GroupDetailPage groupId="maple-house" />
@@ -232,7 +235,7 @@ describe("group management screens", () => {
     );
     fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
 
-    expect(screen.getByText("LKR 9,999.99")).toBeTruthy();
+    expect(await screen.findByText("LKR 9,999.99")).toBeTruthy();
     expect(screen.getByRole("status").textContent).toContain("Expense updated");
 
     fireEvent.click(screen.getByRole("button", { name: "Delete Wi-Fi bill" }));
@@ -241,7 +244,7 @@ describe("group management screens", () => {
     ).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
 
-    expect(screen.queryByText("Wi-Fi bill")).toBeNull();
-    expect(screen.getByRole("status").textContent).toContain("Expense removed");
+    await waitFor(() => expect(screen.queryByText("Wi-Fi bill")).toBeNull());
+    expect((await screen.findByRole("status")).textContent).toContain("Expense removed");
   });
 });

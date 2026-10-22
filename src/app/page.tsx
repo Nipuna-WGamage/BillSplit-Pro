@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { AccountControls } from "@/components/auth/account-controls";
 import { useGroups } from "@/components/groups/group-provider";
 import { calculateGroupBalances } from "@/lib/balances";
 import { formatLkr } from "@/lib/expenses";
@@ -178,7 +179,13 @@ function AvatarStack() {
 }
 
 export default function Home() {
-  const { groups } = useGroups();
+  const {
+    groups,
+    isLoading,
+    isSupabaseMode,
+    persistenceError,
+    userEmail,
+  } = useGroups();
   const allExpenses = groups.flatMap((group) =>
     group.expenses.map((expense) => ({
       ...expense,
@@ -264,7 +271,7 @@ export default function Home() {
           <span className="workspace-avatar">M</span>
           <span className="workspace-copy">
             <span className="workspace-label">WORKSPACE</span>
-            <strong>Maple House</strong>
+            <strong>{groups[0]?.name ?? "Your workspace"}</strong>
           </span>
           <Icon className="workspace-chevron" name="chevronDown" />
         </div>
@@ -283,10 +290,12 @@ export default function Home() {
           </a>
           <div className="sidebar-divider" />
           <div className="profile">
-            <span className="profile-avatar">NP</span>
+            <span className="profile-avatar">
+              {userEmail ? userEmail.slice(0, 2).toLocaleUpperCase() : "NP"}
+            </span>
             <span className="profile-copy">
-              <strong>Nipun Perera</strong>
-              <span>Home admin</span>
+              <strong>{userEmail || "Nipun Perera"}</strong>
+              <span>{isSupabaseMode ? "Account" : "Home admin"}</span>
             </span>
             <Icon className="workspace-chevron" name="chevronDown" />
           </div>
@@ -332,8 +341,9 @@ export default function Home() {
               </svg>
             </button>
             <span className="topbar-avatar" title="Nipun Perera">
-              NP
+              {userEmail ? userEmail.slice(0, 2).toLocaleUpperCase() : "NP"}
             </span>
+            <AccountControls />
           </div>
         </header>
 
@@ -341,12 +351,16 @@ export default function Home() {
           <div className="demo-notice" role="note">
             <span className="demo-indicator" />
             <span>
-              <strong>Demo workspace</strong>
+              <strong>{isSupabaseMode ? "Saved workspace" : "Demo workspace"}</strong>
               <span className="demo-separator">·</span>
-              Sample data only — nothing here is saved or real.
+              {isSupabaseMode
+                ? "Your groups and expenses are saved to your private account."
+                : "Sample data only — nothing here is saved or real."}
             </span>
-            <span className="demo-tag">PREVIEW</span>
+            <span className="demo-tag">{isSupabaseMode ? "PRIVATE" : "PREVIEW"}</span>
           </div>
+          {persistenceError ? <p className="form-error" role="alert">{persistenceError}</p> : null}
+          {isLoading ? <p className="form-success" role="status">Loading your saved workspace…</p> : null}
 
           <section aria-labelledby="welcome-heading" className="welcome-row">
             <div>

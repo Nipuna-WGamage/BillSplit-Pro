@@ -3,23 +3,30 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
+import { AccountControls } from "@/components/auth/account-controls";
 import { useGroups } from "./group-provider";
 
 const categories = ["Household", "Trip", "Family", "Other"] as const;
 
 export function GroupsPage() {
-  const { groups, createGroup } = useGroups();
+  const {
+    groups,
+    createGroup,
+    isLoading,
+    isSupabaseMode,
+    persistenceError,
+  } = useGroups();
   const router = useRouter();
   const [name, setName] = useState("");
   const [category, setCategory] = useState<(typeof categories)[number]>("Household");
   const [location, setLocation] = useState("");
   const [error, setError] = useState("");
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError("");
 
-    const result = createGroup({ name, category, location });
+    const result = await createGroup({ name, category, location });
 
     if (!result.success) {
       setError(result.error);
@@ -41,14 +48,26 @@ export function GroupsPage() {
         <Link className="groups-back-link" href="/">
           <span aria-hidden="true">←</span> Dashboard
         </Link>
+        <AccountControls />
       </header>
 
       <div className="groups-content">
-        <div className="demo-notice groups-demo-notice" role="note">
-          <span className="demo-indicator" />
-          <span><strong>Demo workspace</strong><span className="demo-separator">·</span>Changes are temporary and reset when you refresh.</span>
-          <span className="demo-tag">PREVIEW</span>
-        </div>
+        {isSupabaseMode ? (
+          <div className="demo-notice groups-demo-notice" role="note">
+            <span className="demo-indicator" />
+            <span><strong>Saved workspace</strong><span className="demo-separator">·</span>Changes are saved to your account.</span>
+            <span className="demo-tag">PRIVATE</span>
+          </div>
+        ) : (
+          <div className="demo-notice groups-demo-notice" role="note">
+            <span className="demo-indicator" />
+            <span><strong>Demo workspace</strong><span className="demo-separator">·</span>Changes are temporary and reset when you refresh.</span>
+            <span className="demo-tag">PREVIEW</span>
+          </div>
+        )}
+
+        {persistenceError ? <p className="form-error" role="alert">{persistenceError}</p> : null}
+        {isLoading ? <p className="form-success" role="status">Loading your saved workspace…</p> : null}
 
         <section aria-labelledby="groups-title" className="groups-page-intro">
           <div>
@@ -58,7 +77,7 @@ export function GroupsPage() {
           </div>
           <div aria-label={`${groups.length} demo groups`} className="groups-count">
             <strong>{groups.length}</strong>
-            <span>demo groups</span>
+            <span>{isSupabaseMode ? "saved groups" : "demo groups"}</span>
           </div>
         </section>
 
@@ -73,6 +92,11 @@ export function GroupsPage() {
             </span>
           </div>
           <div className="groups-card-grid">
+            {groups.length === 0 && !isLoading ? (
+              <p className="groups-empty">
+                No groups yet. Create one below to get started.
+              </p>
+            ) : null}
             {groups.map((group, index) => (
               <article className="managed-group-card" key={group.id}>
                 <div className="managed-group-card-top">
@@ -105,7 +129,7 @@ export function GroupsPage() {
             <div>
               <p className="panel-kicker">START SOMETHING TOGETHER</p>
               <h2 id="create-group-title">Create a group</h2>
-              <p>Set up a demo group and add its members.</p>
+              <p>{isSupabaseMode ? "Create a group in your saved workspace." : "Set up a demo group and add its members."}</p>
             </div>
           </div>
           <form className="group-form" onSubmit={handleSubmit}>
@@ -140,8 +164,10 @@ export function GroupsPage() {
             </label>
             {error ? <p className="form-error" role="alert">{error}</p> : null}
             <div className="group-form-footer">
-              <p>Demo-only — this group is not saved to a database.</p>
-              <button className="primary-action" type="submit">Create demo group</button>
+              <p>{isSupabaseMode ? "Your group is saved to your private workspace." : "Demo-only — this group is not saved to a database."}</p>
+              <button className="primary-action" type="submit">
+                {isSupabaseMode ? "Create group" : "Create demo group"}
+              </button>
             </div>
           </form>
         </section>

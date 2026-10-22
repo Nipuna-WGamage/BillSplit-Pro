@@ -39,7 +39,12 @@ function settlementDate(value: string): string {
 }
 
 export function SettlementManagement({ groupId }: SettlementManagementProps) {
-  const { groups, createSettlement, deleteSettlement } = useGroups();
+  const {
+    groups,
+    createSettlement,
+    deleteSettlement,
+    isSupabaseMode,
+  } = useGroups();
   const group = groups.find((item) => item.id === groupId);
   const balances = group
     ? calculateGroupBalances(group.members, group.expenses, group.settlements)
@@ -81,12 +86,12 @@ export function SettlementManagement({ groupId }: SettlementManagementProps) {
   const maximumSettlement = Math.min(Math.abs(fromBalance), toBalance);
   const settlements = [...group.settlements].reverse();
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError("");
     setNotice("");
 
-    const result = createSettlement(groupId, form);
+    const result = await createSettlement(groupId, form);
 
     if (!result.success) {
       setError(result.error);
@@ -111,13 +116,17 @@ export function SettlementManagement({ groupId }: SettlementManagementProps) {
 
     setForm(emptyForm(nextOwing?.id ?? "", nextOwed?.id ?? ""));
     setPendingDeleteId(null);
-    setNotice("Settlement recorded in this demo.");
+    setNotice(
+      isSupabaseMode
+        ? "Settlement recorded and saved."
+        : "Settlement recorded in this demo.",
+    );
   }
 
-  function handleDelete(settlementId: string) {
+  async function handleDelete(settlementId: string) {
     setError("");
     setNotice("");
-    const result = deleteSettlement(groupId, settlementId);
+    const result = await deleteSettlement(groupId, settlementId);
 
     if (!result.success) {
       setError(result.error);
@@ -126,7 +135,11 @@ export function SettlementManagement({ groupId }: SettlementManagementProps) {
     }
 
     setPendingDeleteId(null);
-    setNotice("Settlement removed from this demo and balances recalculated.");
+    setNotice(
+      isSupabaseMode
+        ? "Settlement removed and balances recalculated."
+        : "Settlement removed from this demo and balances recalculated.",
+    );
   }
 
   return (

@@ -49,7 +49,13 @@ function isExpenseCategory(value: string): value is ExpenseCategory {
 }
 
 export function ExpenseManagement({ groupId }: ExpenseManagementProps) {
-  const { groups, createExpense, updateExpense, deleteExpense } = useGroups();
+  const {
+    groups,
+    createExpense,
+    updateExpense,
+    deleteExpense,
+    isSupabaseMode,
+  } = useGroups();
   const group = groups.find((item) => item.id === groupId);
   const [form, setForm] = useState<ExpenseInput>(() =>
     emptyForm(group?.members[0]?.id ?? ""),
@@ -68,14 +74,14 @@ export function ExpenseManagement({ groupId }: ExpenseManagementProps) {
     second.date.localeCompare(first.date),
   );
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError("");
     setNotice("");
 
-    const result = editingExpenseId
+    const result = await (editingExpenseId
       ? updateExpense(groupId, editingExpenseId, form)
-      : createExpense(groupId, form);
+      : createExpense(groupId, form));
 
     if (!result.success) {
       setError(result.error);
@@ -83,9 +89,13 @@ export function ExpenseManagement({ groupId }: ExpenseManagementProps) {
     }
 
     setNotice(
-      editingExpenseId
-        ? "Expense updated in this demo."
-        : "Expense added to this demo.",
+      isSupabaseMode
+        ? editingExpenseId
+          ? "Expense updated and saved."
+          : "Expense added and saved."
+        : editingExpenseId
+          ? "Expense updated in this demo."
+          : "Expense added to this demo.",
     );
     setEditingExpenseId(null);
     setPendingDeleteId(null);
@@ -119,11 +129,11 @@ export function ExpenseManagement({ groupId }: ExpenseManagementProps) {
     }
   }
 
-  function handleDelete(expenseId: string) {
+  async function handleDelete(expenseId: string) {
     setError("");
     setNotice("");
 
-    const result = deleteExpense(groupId, expenseId);
+    const result = await deleteExpense(groupId, expenseId);
 
     if (!result.success) {
       setError(result.error);
@@ -137,7 +147,11 @@ export function ExpenseManagement({ groupId }: ExpenseManagementProps) {
     }
 
     setPendingDeleteId(null);
-    setNotice("Expense removed from this demo.");
+    setNotice(
+      isSupabaseMode
+        ? "Expense removed from your saved workspace."
+        : "Expense removed from this demo.",
+    );
   }
 
   function cancelEdit() {

@@ -1,9 +1,13 @@
 import { cleanup, render, screen, within } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { GroupProvider } from "@/components/groups/group-provider";
 import Home from "./page";
 
 afterEach(cleanup);
+
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ replace: vi.fn() }),
+}));
 
 function renderHome() {
   return render(
