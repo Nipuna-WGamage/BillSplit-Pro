@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { useState, type FormEvent } from "react";
+import { calculateGroupBalances } from "@/lib/balances";
+import { formatLkr } from "@/lib/expenses";
 import { ExpenseManagement } from "./expense-management";
 import { useGroups } from "./group-provider";
 
@@ -41,6 +43,8 @@ export function GroupDetailPage({ groupId }: { groupId: string }) {
       </main>
     );
   }
+
+  const balances = calculateGroupBalances(group.members, group.expenses);
 
   function handleAddMember(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -214,6 +218,45 @@ export function GroupDetailPage({ groupId }: { groupId: string }) {
             </section>
           </aside>
         </div>
+
+        <section aria-labelledby="group-balances-title" className="group-detail-panel group-balances-panel">
+          <div className="groups-section-heading">
+            <div>
+              <p className="panel-kicker">EQUAL SPLIT SUMMARY</p>
+              <h2 id="group-balances-title">Member balances</h2>
+            </div>
+            <span className="group-category-pill">LKR</span>
+          </div>
+          <p className="group-balances-intro">
+            Based on each member&apos;s share of unsettled demo expenses. Remainder cents are assigned consistently.
+          </p>
+          <ul className="group-balance-list">
+            {group.members.map((member) => {
+              const balanceMinor = balances.find(
+                (balance) => balance.memberId === member.id,
+              )?.balanceMinor ?? 0;
+
+              return (
+                <li className="group-balance-row" key={member.id}>
+                  <span className="group-balance-member">{member.name}</span>
+                  <span className={`group-balance-amount ${
+                    balanceMinor > 0
+                      ? "group-balance-positive"
+                      : balanceMinor < 0
+                        ? "group-balance-negative"
+                        : "group-balance-even"
+                  }`}>
+                    {balanceMinor > 0
+                      ? `Owed ${formatLkr(balanceMinor)}`
+                      : balanceMinor < 0
+                        ? `Owes ${formatLkr(Math.abs(balanceMinor))}`
+                        : "Settled up"}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
 
         <ExpenseManagement groupId={group.id} />
 

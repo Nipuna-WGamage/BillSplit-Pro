@@ -78,6 +78,32 @@ describe("group management screens", () => {
     expect(screen.queryByRole("button", { name: "Remove Nipun Perera from Maple House" })).toBeNull();
   });
 
+  it("shows per-member balances calculated from equal expense shares", () => {
+    render(
+      <GroupProvider>
+        <GroupDetailPage groupId="maple-house" />
+      </GroupProvider>,
+    );
+
+    const balances = screen.getByRole("region", { name: "Member balances" });
+
+    expect(within(balances).getByText("Owed LKR 5,290.00")).toBeTruthy();
+    expect(within(balances).getByText("Owed LKR 1,030.00")).toBeTruthy();
+    expect(within(balances).getAllByText("Owes LKR 3,160.00")).toHaveLength(2);
+  });
+
+  it("shows the precise equal share for each expense participant", () => {
+    render(
+      <GroupProvider>
+        <GroupDetailPage groupId="maple-house" />
+      </GroupProvider>,
+    );
+
+    fireEvent.click(screen.getAllByText("View equal split")[0]);
+
+    expect(screen.getAllByText("LKR 2,112.50")).toHaveLength(4);
+  });
+
   it("adds an expense with a payer and selected participants", () => {
     render(
       <GroupProvider>
@@ -98,7 +124,7 @@ describe("group management screens", () => {
     expect(screen.getByRole("status").textContent).toContain(
       "Expense added to this demo.",
     );
-    expect(screen.getByText("LKR 125.50")).toBeTruthy();
+    expect(screen.getAllByText("LKR 125.50")).toHaveLength(2);
   });
 
   it("edits and confirms deletion of an expense", () => {

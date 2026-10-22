@@ -17,8 +17,11 @@ balance calculations, and settlements will be added incrementally.
 The current application provides a responsive dashboard and demo-only group,
 member, and expense management. Group, member, and expense changes live in
 browser memory and reset on refresh; nothing is saved to a backend. Expense
-splits and balances are not calculated. Authentication and persistent data are
-not implemented yet.
+shares are split equally among selected participants, with remainder minor
+units assigned in stable member-ID order. Unsettled expense balances show how
+much each member owes or is owed. Split allocations and balances are demo
+calculations, not saved or settled transactions. Authentication and persistent
+data are not implemented yet.
 
 ## Getting started
 
@@ -35,9 +38,10 @@ Open [http://localhost:3000](http://localhost:3000) to view the application.
 
 The web application uses the Next.js App Router in `src/app/`. Route pages and
 layouts compose the interface; reusable UI belongs in `src/components/`.
-Framework-independent group and expense types, validation, and minor-unit
-amount parsing live in `src/lib/`; financial calculations should also remain
-separate from React. Tests live alongside the code they cover.
+Framework-independent group and expense types, validation, minor-unit amount
+parsing, equal allocation, and balance calculations live in `src/lib/`.
+Financial calculations should remain separate from React. Tests live alongside
+the code they cover.
 
 Future backend work will add Supabase migrations and server-side access
 boundaries. PostgreSQL Row Level Security is required for authorization;

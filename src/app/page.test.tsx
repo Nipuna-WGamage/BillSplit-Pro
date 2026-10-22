@@ -33,6 +33,17 @@ describe("home page", () => {
     );
   });
 
+  it("shows the current user's calculated balance from demo expenses", () => {
+    renderHome();
+
+    expect(
+      within(screen.getByRole("region", { name: "Demo expense summary" })).getByText(
+        "LKR 2,940.00",
+      ),
+    ).toBeTruthy();
+    expect(screen.getByText("Based on equal splits of demo expenses")).toBeTruthy();
+  });
+
   it("provides labeled desktop and mobile navigation", () => {
     renderHome();
 

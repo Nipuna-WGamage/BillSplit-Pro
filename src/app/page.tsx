@@ -3,6 +3,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { useGroups } from "@/components/groups/group-provider";
+import { calculateGroupBalances } from "@/lib/balances";
 import { formatLkr } from "@/lib/expenses";
 
 type IconName =
@@ -135,7 +136,13 @@ function BrandMark() {
   );
 }
 
-function NavigationLinks({ mobile = false }: { mobile?: boolean }) {
+function NavigationLinks({
+  mobile = false,
+  balanceCount = 0,
+}: {
+  mobile?: boolean;
+  balanceCount?: number;
+}) {
   return (
     <nav
       aria-label={mobile ? "Mobile navigation" : "Main navigation"}
@@ -151,7 +158,7 @@ function NavigationLinks({ mobile = false }: { mobile?: boolean }) {
           <Icon className="nav-icon" name={item.icon} />
           <span>{item.label}</span>
           {item.label === "Balances" && !mobile ? (
-            <span className="nav-count">2</span>
+            <span className="nav-count">{balanceCount}</span>
           ) : null}
         </Link>
       ))}
@@ -188,6 +195,55 @@ export default function Home() {
     (total, expense) => total + expense.amountMinor,
     0,
   );
+  const groupBalances = groups.map((group) => ({
+    group,
+    balances: calculateGroupBalances(group.members, group.expenses),
+  }));
+  const balanceRows = groupBalances.flatMap(({ group, balances }) =>
+    balances.flatMap((balance) => {
+      if (balance.balanceMinor === 0) {
+        return [];
+      }
+
+      const member = group.members.find((item) => item.id === balance.memberId);
+
+      return member
+        ? [{ ...balance, memberName: member.name, groupName: group.name }]
+        : [];
+    }),
+  );
+  const currentUserBalanceMinor = groupBalances.reduce(
+    (total, { group, balances }) => {
+      const admin = group.members.find((member) => member.role === "Admin");
+
+      if (!admin) {
+        return total;
+      }
+
+      const adminBalance = balances.find((balance) => balance.memberId === admin.id);
+
+      return total + (adminBalance?.balanceMinor ?? 0);
+    },
+    0,
+  );
+  const currentUserBalanceGroupCount = groupBalances.filter(
+    ({ group, balances }) => {
+      const admin = group.members.find((member) => member.role === "Admin");
+
+      return admin
+        ? balances.some(
+            (balance) =>
+              balance.memberId === admin.id && balance.balanceMinor !== 0,
+          )
+        : false;
+    },
+  ).length;
+  const topBalances = [...balanceRows]
+    .sort(
+      (first, second) =>
+        Math.abs(second.balanceMinor) - Math.abs(first.balanceMinor),
+    )
+    .slice(0, 2);
 
   return (
     <div className="app-shell">
@@ -210,7 +266,7 @@ export default function Home() {
         </div>
 
         <span className="nav-section-label">MENU</span>
-        <NavigationLinks />
+        <NavigationLinks balanceCount={balanceRows.length} />
 
         <div className="sidebar-bottom">
           <a className="nav-link" href="#monthly-overview">
@@ -310,13 +366,17 @@ export default function Home() {
                 <span className="summary-label">Your balance</span>
                 <span className="balance-status">All groups</span>
               </div>
-              <p className="summary-value">LKR 4,250<span>.00</span></p>
+              <p className="summary-value">{formatLkr(Math.abs(currentUserBalanceMinor))}</p>
               <div className="summary-foot">
                 <span className="balance-pill">
-                  <Icon name="arrowUp" />
-                  You are owed
+                  <Icon name={currentUserBalanceMinor < 0 ? "arrowDown" : "arrowUp"} />
+                  {currentUserBalanceMinor > 0
+                    ? "You are owed"
+                    : currentUserBalanceMinor < 0
+                      ? "You owe"
+                      : "All settled"}
                 </span>
-                <span>across 2 groups</span>
+                <span>across {currentUserBalanceGroupCount} groups</span>
               </div>
               <span aria-hidden="true" className="card-decoration card-decoration-one" />
               <span aria-hidden="true" className="card-decoration card-decoration-two" />
@@ -403,29 +463,29 @@ export default function Home() {
                 </div>
                 <button aria-label="Balance options" className="panel-menu" type="button">···</button>
               </div>
-              <div className="balance-person">
-                <span className="person-avatar person-avatar-sage">NP</span>
-                <span className="person-copy">
-                  <strong>Nimal Perera</strong>
-                  <span>Maple House</span>
-                </span>
-                <span className="person-balance positive">+ LKR 3,100</span>
-              </div>
-              <div className="balance-person">
-                <span className="person-avatar person-avatar-rose">AB</span>
-                <span className="person-copy">
-                  <strong>Amaya Bandara</strong>
-                  <span>Beach Weekend</span>
-                </span>
-                <span className="person-balance negative">− LKR 1,250</span>
-              </div>
+              {topBalances.length > 0 ? topBalances.map((balance, index) => (
+                <div className="balance-person" key={`${balance.memberId}-${balance.groupName}`}>
+                  <span className={`person-avatar person-avatar-${index === 0 ? "sage" : "rose"}`}>
+                    {balance.memberName.split(/\s+/).map((part) => part[0]).slice(0, 2).join("")}
+                  </span>
+                  <span className="person-copy">
+                    <strong>{balance.memberName}</strong>
+                    <span>{balance.groupName}</span>
+                  </span>
+                  <span className={`person-balance ${balance.balanceMinor > 0 ? "positive" : "negative"}`}>
+                    {balance.balanceMinor > 0 ? "+" : "−"} {formatLkr(Math.abs(balance.balanceMinor))}
+                  </span>
+                </div>
+              )) : (
+                <p className="balance-empty">Everyone is settled up in the demo groups.</p>
+              )}
               <div className="balance-summary">
                 <span className="balance-summary-icon">
                   <Icon name="activity" />
                 </span>
                 <span>
                   <strong>Keep things balanced</strong>
-                  <span>Sample balances for your demo groups</span>
+                  <span>Based on equal splits of demo expenses</span>
                 </span>
               </div>
             </article>
@@ -502,7 +562,7 @@ export default function Home() {
         </div>
       </main>
 
-      <NavigationLinks mobile />
+      <NavigationLinks balanceCount={balanceRows.length} mobile />
     </div>
   );
 }

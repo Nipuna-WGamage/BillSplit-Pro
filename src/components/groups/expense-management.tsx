@@ -7,6 +7,7 @@ import {
   type ExpenseCategory,
   type ExpenseInput,
 } from "@/lib/expenses";
+import { splitExpenseEqually } from "@/lib/balances";
 import { useGroups } from "./group-provider";
 
 type ExpenseManagementProps = {
@@ -187,6 +188,10 @@ export function ExpenseManagement({ groupId }: ExpenseManagementProps) {
             const payer = activeGroup.members.find(
               (member) => member.id === expense.paidByMemberId,
             );
+            const shares = splitExpenseEqually(
+              expense.amountMinor,
+              expense.participantMemberIds,
+            );
             const deletePending = pendingDeleteId === expense.id;
 
             return (
@@ -207,6 +212,19 @@ export function ExpenseManagement({ groupId }: ExpenseManagementProps) {
                         .filter(Boolean)
                         .join(", ")}
                     </span>
+                    <details className="expense-split-details">
+                      <summary>View equal split</summary>
+                      <ul>
+                        {shares.map((share) => (
+                          <li key={share.memberId}>
+                            <span>
+                              {activeGroup.members.find((member) => member.id === share.memberId)?.name}
+                            </span>
+                            <strong>{formatLkr(share.amountMinor)}</strong>
+                          </li>
+                        ))}
+                      </ul>
+                    </details>
                   </span>
                 </div>
                 <span className="expense-history-payer">{payer?.name ?? "Group member"}</span>
@@ -358,7 +376,7 @@ export function ExpenseManagement({ groupId }: ExpenseManagementProps) {
         </div>
 
         <div className="expense-form-footer">
-          <p>Split allocation is not calculated in this milestone.</p>
+          <p>Selected participants share the amount equally.</p>
           <div>
             {editingExpenseId ? (
               <button className="secondary-action" onClick={cancelEdit} type="button">
