@@ -5,6 +5,7 @@ import { useState, type FormEvent } from "react";
 import { calculateGroupBalances } from "@/lib/balances";
 import { formatLkr } from "@/lib/expenses";
 import { ExpenseManagement } from "./expense-management";
+import { SettlementManagement } from "./settlement-management";
 import { useGroups } from "./group-provider";
 
 function initials(name: string): string {
@@ -44,7 +45,11 @@ export function GroupDetailPage({ groupId }: { groupId: string }) {
     );
   }
 
-  const balances = calculateGroupBalances(group.members, group.expenses);
+  const balances = calculateGroupBalances(
+    group.members,
+    group.expenses,
+    group.settlements,
+  );
 
   function handleAddMember(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -258,6 +263,7 @@ export function GroupDetailPage({ groupId }: { groupId: string }) {
           </ul>
         </section>
 
+        <SettlementManagement groupId={group.id} />
         <ExpenseManagement groupId={group.id} />
 
         <footer className="page-footer groups-page-footer">

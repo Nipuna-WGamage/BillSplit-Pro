@@ -104,6 +104,90 @@ describe("group management screens", () => {
     expect(screen.getAllByText("LKR 2,112.50")).toHaveLength(4);
   });
 
+  it("records a partial payment and updates balances and payment history", () => {
+    render(
+      <GroupProvider>
+        <GroupDetailPage groupId="maple-house" />
+      </GroupProvider>,
+    );
+
+    fireEvent.change(
+      within(screen.getByRole("region", { name: "Settlements" })).getByRole(
+        "textbox",
+        { name: /amount \(lkr\)/i },
+      ),
+      {
+        target: { value: "100.00" },
+      },
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Record demo settlement" }));
+
+    const balancePanel = screen.getByRole("region", { name: "Member balances" });
+    expect(within(balancePanel).getByText("Owed LKR 5,190.00")).toBeTruthy();
+    expect(within(balancePanel).getByText("Owes LKR 3,060.00")).toBeTruthy();
+    expect(screen.getByRole("status").textContent).toContain(
+      "Settlement recorded in this demo.",
+    );
+    expect(screen.getByText("LKR 100.00")).toBeTruthy();
+  });
+
+  it("allows undoing a settlement and recalculates group balances", () => {
+    render(
+      <GroupProvider>
+        <GroupDetailPage groupId="maple-house" />
+      </GroupProvider>,
+    );
+
+    fireEvent.change(
+      within(screen.getByRole("region", { name: "Settlements" })).getByRole(
+        "textbox",
+        { name: /amount \(lkr\)/i },
+      ),
+      { target: { value: "100.00" } },
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Record demo settlement" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Remove settlement of LKR 100.00" }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
+
+    const balancePanel = screen.getByRole("region", { name: "Member balances" });
+    expect(within(balancePanel).getByText("Owed LKR 5,290.00")).toBeTruthy();
+    expect(within(balancePanel).getAllByText("Owes LKR 3,160.00")).toHaveLength(2);
+    expect(screen.getByText("No demo payments recorded yet.")).toBeTruthy();
+  });
+
+  it("protects expense history from edits after a settlement is recorded", () => {
+    render(
+      <GroupProvider>
+        <GroupDetailPage groupId="maple-house" />
+      </GroupProvider>,
+    );
+
+    fireEvent.change(
+      within(screen.getByRole("region", { name: "Settlements" })).getByRole(
+        "textbox",
+        { name: /amount \(lkr\)/i },
+      ),
+      { target: { value: "100.00" } },
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Record demo settlement" }));
+    fireEvent.click(screen.getByRole("button", { name: "Edit Weekly groceries" }));
+    fireEvent.change(
+      within(screen.getByRole("region", { name: /expenses/i })).getByRole(
+        "textbox",
+        { name: /amount \(lkr\)/i },
+      ),
+      { target: { value: "9999.99" } },
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
+
+    expect(screen.getByRole("alert").textContent).toContain(
+      "Expenses cannot be edited after a settlement is recorded.",
+    );
+    expect(screen.getByText("LKR 8,450.00")).toBeTruthy();
+  });
+
   it("adds an expense with a payer and selected participants", () => {
     render(
       <GroupProvider>
@@ -114,9 +198,13 @@ describe("group management screens", () => {
     fireEvent.change(screen.getByRole("textbox", { name: /description/i }), {
       target: { value: "Shared cleaning supplies" },
     });
-    fireEvent.change(screen.getByRole("textbox", { name: /amount \(lkr\)/i }), {
-      target: { value: "125.50" },
-    });
+    fireEvent.change(
+      within(screen.getByRole("region", { name: /expenses/i })).getByRole(
+        "textbox",
+        { name: /amount \(lkr\)/i },
+      ),
+      { target: { value: "125.50" } },
+    );
     fireEvent.click(screen.getByRole("checkbox", { name: "Nipun Perera" }));
     fireEvent.click(screen.getByRole("button", { name: "Add demo expense" }));
 
@@ -135,9 +223,13 @@ describe("group management screens", () => {
     );
 
     fireEvent.click(screen.getByRole("button", { name: "Edit Weekly groceries" }));
-    fireEvent.change(screen.getByRole("textbox", { name: /amount \(lkr\)/i }), {
-      target: { value: "9999.99" },
-    });
+    fireEvent.change(
+      within(screen.getByRole("region", { name: /expenses/i })).getByRole(
+        "textbox",
+        { name: /amount \(lkr\)/i },
+      ),
+      { target: { value: "9999.99" } },
+    );
     fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
 
     expect(screen.getByText("LKR 9,999.99")).toBeTruthy();

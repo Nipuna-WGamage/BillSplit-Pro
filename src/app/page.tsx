@@ -197,7 +197,11 @@ export default function Home() {
   );
   const groupBalances = groups.map((group) => ({
     group,
-    balances: calculateGroupBalances(group.members, group.expenses),
+    balances: calculateGroupBalances(
+      group.members,
+      group.expenses,
+      group.settlements,
+    ),
   }));
   const balanceRows = groupBalances.flatMap(({ group, balances }) =>
     balances.flatMap((balance) => {

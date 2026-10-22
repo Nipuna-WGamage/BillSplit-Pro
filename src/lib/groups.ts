@@ -1,4 +1,5 @@
 import type { GroupExpense } from "./expenses";
+import type { GroupSettlement } from "./settlements";
 
 export type GroupCategory = "Household" | "Trip" | "Family" | "Other";
 
@@ -17,6 +18,7 @@ export type DemoGroup = {
   description: string;
   members: GroupMember[];
   expenses: GroupExpense[];
+  settlements: GroupSettlement[];
 };
 
 export type MutationResult<T> =
@@ -60,6 +62,7 @@ export const initialDemoGroups: DemoGroup[] = [
         settled: false,
       },
     ],
+    settlements: [],
   },
   {
     id: "beach-weekend",
@@ -98,6 +101,7 @@ export const initialDemoGroups: DemoGroup[] = [
         settled: false,
       },
     ],
+    settlements: [],
   },
   {
     id: "family",
@@ -123,6 +127,7 @@ export const initialDemoGroups: DemoGroup[] = [
         settled: false,
       },
     ],
+    settlements: [],
   },
 ];
 
@@ -175,6 +180,7 @@ export function createDemoGroup(
       location: input.location.trim(),
       description: "",
       expenses: [],
+      settlements: [],
       members: [
         {
           id: `member-${id}-admin`,
@@ -250,6 +256,19 @@ export function removeDemoGroupMember(
     return {
       success: false,
       error: "This member is referenced by an expense. Remove or update those expenses first.",
+    };
+  }
+
+  if (
+    group.settlements.some(
+      (settlement) =>
+        settlement.fromMemberId === memberId ||
+        settlement.toMemberId === memberId,
+    )
+  ) {
+    return {
+      success: false,
+      error: "This member is referenced by a settlement and cannot be removed.",
     };
   }
 

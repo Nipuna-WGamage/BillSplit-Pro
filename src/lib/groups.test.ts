@@ -86,4 +86,26 @@ describe("demo group operations", () => {
       error: "This member is referenced by an expense. Remove or update those expenses first.",
     });
   });
+
+  it("prevents removing a member referenced by a settlement", () => {
+    const group = {
+      ...initialDemoGroups[0],
+      expenses: [],
+      settlements: [
+        {
+          id: "settlement-1",
+          fromMemberId: "nimal-perera",
+          toMemberId: "nipun-perera",
+          amountMinor: 100,
+          date: "2026-10-20",
+          notes: "",
+        },
+      ],
+    };
+
+    expect(removeDemoGroupMember(group, "nimal-perera")).toMatchObject({
+      success: false,
+      error: "This member is referenced by a settlement and cannot be removed.",
+    });
+  });
 });

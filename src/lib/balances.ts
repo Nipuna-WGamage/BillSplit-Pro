@@ -1,5 +1,6 @@
 import type { GroupExpense } from "./expenses";
 import type { GroupMember } from "./groups";
+import type { GroupSettlement } from "./settlements";
 
 export type ExpenseShare = {
   memberId: string;
@@ -41,6 +42,7 @@ export function splitExpenseEqually(
 export function calculateGroupBalances(
   members: GroupMember[],
   expenses: GroupExpense[],
+  settlements: GroupSettlement[] = [],
 ): MemberBalance[] {
   const balances = new Map(members.map((member) => [member.id, 0]));
 
@@ -79,6 +81,35 @@ export function calculateGroupBalances(
         checkedBalance(memberBalance - share.amountMinor),
       );
     }
+  }
+
+  for (const settlement of settlements) {
+    if (
+      !Number.isSafeInteger(settlement.amountMinor) ||
+      settlement.amountMinor <= 0
+    ) {
+      throw new RangeError("Settlement amount must be a positive safe integer.");
+    }
+
+    if (settlement.fromMemberId === settlement.toMemberId) {
+      throw new RangeError("Settlement members must be different.");
+    }
+
+    const fromBalance = balances.get(settlement.fromMemberId);
+    const toBalance = balances.get(settlement.toMemberId);
+
+    if (fromBalance === undefined || toBalance === undefined) {
+      throw new RangeError("Settlement members must belong to the group.");
+    }
+
+    balances.set(
+      settlement.fromMemberId,
+      checkedBalance(fromBalance + settlement.amountMinor),
+    );
+    balances.set(
+      settlement.toMemberId,
+      checkedBalance(toBalance - settlement.amountMinor),
+    );
   }
 
   return members.map((member) => ({

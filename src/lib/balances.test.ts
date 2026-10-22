@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { calculateGroupBalances, splitExpenseEqually } from "./balances";
 import type { GroupExpense } from "./expenses";
 import type { GroupMember } from "./groups";
+import type { GroupSettlement } from "./settlements";
 
 const members: GroupMember[] = [
   { id: "alice", name: "Alice", email: "alice@example.test", role: "Admin" },
@@ -81,6 +82,29 @@ describe("group balance calculation", () => {
     expect(
       calculateGroupBalances(members, [expense({ settled: true })]),
     ).toEqual(members.map((member) => ({ memberId: member.id, balanceMinor: 0 })));
+  });
+
+  it("applies each settlement once after all expenses are tallied", () => {
+    const settlement: GroupSettlement = {
+      id: "settlement-1",
+      fromMemberId: "bob",
+      toMemberId: "alice",
+      amountMinor: 10,
+      date: "2026-10-20",
+      notes: "",
+    };
+
+    expect(
+      calculateGroupBalances(
+        members,
+        [expense(), expense({ id: "expense-2" })],
+        [settlement],
+      ),
+    ).toEqual([
+      { memberId: "alice", balanceMinor: 122 },
+      { memberId: "bob", balanceMinor: -56 },
+      { memberId: "cara", balanceMinor: -66 },
+    ]);
   });
 
   it("rejects expenses with references outside the group", () => {

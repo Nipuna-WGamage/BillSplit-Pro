@@ -2318,6 +2318,112 @@ p {
   color: #89948b;
 }
 
+.settlement-panel {
+  margin-top: 14px;
+}
+
+.settlement-intro {
+  margin: 8px 0 0;
+  color: #89948b;
+  font-size: 9px;
+  line-height: 1.5;
+}
+
+.settlement-form {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 11px;
+  margin-top: 14px;
+}
+
+.settlement-form .form-field {
+  min-width: 0;
+}
+
+.settlement-notes-field {
+  grid-column: span 2;
+}
+
+.settlement-submit {
+  align-self: end;
+  justify-self: start;
+  min-height: 36px;
+}
+
+.settlement-submit:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.settlement-history {
+  margin-top: 17px;
+  border-top: 1px solid #edf0ec;
+  padding-top: 13px;
+}
+
+.settlement-history h3 {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0;
+  color: #48554b;
+  font-size: 10px;
+  font-weight: 640;
+}
+
+.settlement-empty {
+  margin: 10px 0 0;
+  color: #89948b;
+  font-size: 9px;
+}
+
+.settlement-list {
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.settlement-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto auto;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid #eff1ee;
+  padding: 9px 0;
+}
+
+.settlement-transfer {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px;
+  color: #879188;
+  font-size: 9px;
+}
+
+.settlement-transfer strong {
+  color: #49564c;
+  font-weight: 620;
+}
+
+.settlement-row time {
+  color: #89948b;
+  font-size: 8px;
+  white-space: nowrap;
+}
+
+.settlement-amount {
+  color: #3e704b;
+  font-size: 9px;
+  white-space: nowrap;
+}
+
+.settlement-actions {
+  display: flex;
+  gap: 2px;
+}
+
 .members-panel h2 {
   display: flex;
   align-items: center;
@@ -2573,6 +2679,10 @@ p {
     grid-template-columns: minmax(0, 1fr);
   }
 
+  .settlement-form {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .group-detail-aside {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -2725,6 +2835,25 @@ p {
   .group-detail-grid {
     gap: 10px;
     margin-top: 10px;
+  }
+
+  .settlement-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .settlement-transfer {
+    grid-column: 1;
+  }
+
+  .settlement-row time {
+    grid-column: 1;
+  }
+
+  .settlement-amount,
+  .settlement-actions,
+  .settlement-row > .expense-action {
+    grid-column: 2;
+    justify-self: end;
   }
 
   .group-detail-panel {

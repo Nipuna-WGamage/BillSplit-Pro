@@ -13,6 +13,12 @@ import {
   updateExpense as updateDemoExpense,
   type ExpenseInput,
 } from "@/lib/expenses";
+import { calculateGroupBalances } from "@/lib/balances";
+import {
+  createSettlement as createDemoSettlement,
+  deleteSettlement as deleteDemoSettlement,
+  type SettlementInput,
+} from "@/lib/settlements";
 import {
   addDemoGroupMember,
   createDemoGroup,
@@ -57,6 +63,14 @@ type GroupContextValue = {
   deleteExpense: (
     groupId: string,
     expenseId: string,
+  ) => MutationResult<DemoGroup>;
+  createSettlement: (
+    groupId: string,
+    input: SettlementInput,
+  ) => MutationResult<DemoGroup>;
+  deleteSettlement: (
+    groupId: string,
+    settlementId: string,
   ) => MutationResult<DemoGroup>;
 };
 
@@ -148,6 +162,13 @@ export function GroupProvider({ children }: { children: ReactNode }) {
           return { success: false, error: "This group could not be found." };
         }
 
+        if (group.settlements.length > 0) {
+          return {
+            success: false,
+            error: "Expenses cannot be edited after a settlement is recorded. Undo settlements first.",
+          };
+        }
+
         const result = updateDemoExpense(
           expenseId,
           input,
@@ -178,6 +199,13 @@ export function GroupProvider({ children }: { children: ReactNode }) {
           return { success: false, error: "This group could not be found." };
         }
 
+        if (group.settlements.length > 0) {
+          return {
+            success: false,
+            error: "Expenses cannot be deleted after a settlement is recorded. Undo settlements first.",
+          };
+        }
+
         const result = deleteDemoExpense(expenseId, group.expenses);
 
         if (!result.success) {
@@ -185,6 +213,54 @@ export function GroupProvider({ children }: { children: ReactNode }) {
         }
 
         const updatedGroup = { ...group, expenses: result.value };
+        setGroups((current) =>
+          current.map((item) => (item.id === groupId ? updatedGroup : item)),
+        );
+
+        return { success: true, value: updatedGroup };
+      },
+      createSettlement(groupId, input) {
+        const group = groups.find((item) => item.id === groupId);
+
+        if (!group) {
+          return { success: false, error: "This group could not be found." };
+        }
+
+        const currentBalances = calculateGroupBalances(
+          group.members,
+          group.expenses,
+          group.settlements,
+        );
+        const result = createDemoSettlement(input, group.members, currentBalances);
+
+        if (!result.success) {
+          return result;
+        }
+
+        const updatedGroup = {
+          ...group,
+          settlements: [...group.settlements, result.value],
+        };
+        setGroups((current) =>
+          current.map((item) => (item.id === groupId ? updatedGroup : item)),
+        );
+
+        return { success: true, value: updatedGroup };
+      },
+      deleteSettlement(groupId, settlementId) {
+        const group = groups.find((item) => item.id === groupId);
+
+        if (!group) {
+          return { success: false, error: "This group could not be found." };
+        }
+
+        const result = deleteDemoSettlement(settlementId, group.settlements);
+
+        if (!result.success) {
+          return result;
+        }
+
+        const updatedGroup = { ...group, settlements: result.value };
         setGroups((current) =>
           current.map((item) => (item.id === groupId ? updatedGroup : item)),
         );

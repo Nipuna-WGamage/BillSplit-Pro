@@ -3,7 +3,7 @@
 BillSplit Pro is a shared household expense-splitting application for friends,
 roommates, families, and other groups. The initial currency is LKR. The project
 is being developed in milestones; features such as groups, expense tracking,
-balance calculations, and settlements will be added incrementally.
+balance calculations, and payment tracking are being added incrementally.
 
 ## Technology
 
@@ -20,7 +20,8 @@ browser memory and reset on refresh; nothing is saved to a backend. Expense
 shares are split equally among selected participants, with remainder minor
 units assigned in stable member-ID order. Unsettled expense balances show how
 much each member owes or is owed. Split allocations and balances are demo
-calculations, not saved or settled transactions. Authentication and persistent
+calculations, and recorded payments can be undone; all changes remain temporary
+demo data. Payment records do not transfer money. Authentication and persistent
 data are not implemented yet.
 
 ## Getting started
@@ -39,9 +40,9 @@ Open [http://localhost:3000](http://localhost:3000) to view the application.
 The web application uses the Next.js App Router in `src/app/`. Route pages and
 layouts compose the interface; reusable UI belongs in `src/components/`.
 Framework-independent group and expense types, validation, minor-unit amount
-parsing, equal allocation, and balance calculations live in `src/lib/`.
-Financial calculations should remain separate from React. Tests live alongside
-the code they cover.
+parsing, equal allocation, balance calculations, and settlement validation live
+in `src/lib/`. Financial calculations should remain separate from React. Tests
+live alongside the code they cover.
 
 Future backend work will add Supabase migrations and server-side access
 boundaries. PostgreSQL Row Level Security is required for authorization;
