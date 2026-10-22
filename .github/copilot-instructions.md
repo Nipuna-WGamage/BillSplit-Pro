@@ -15,7 +15,7 @@
 
 - Keep route-specific pages and layouts in `src/app/`; put reusable UI in
   `src/components/` and framework-independent domain logic and validation in
-  `src/lib/`.
+  `src/lib/`. Group and member demo data is modeled in `src/lib/groups.ts`.
 - Keep Server Components by default. Use `"use client"` only where browser
   interaction or client-side state requires it.
 - Keep financial calculations independent of React and represent money as

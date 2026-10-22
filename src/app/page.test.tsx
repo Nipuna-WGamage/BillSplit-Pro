@@ -1,12 +1,21 @@
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
+import { GroupProvider } from "@/components/groups/group-provider";
 import Home from "./page";
 
 afterEach(cleanup);
 
+function renderHome() {
+  return render(
+    <GroupProvider>
+      <Home />
+    </GroupProvider>,
+  );
+}
+
 describe("home page", () => {
   it("renders the dashboard heading", () => {
-    render(<Home />);
+    renderHome();
 
     expect(
       screen.getByRole("heading", {
@@ -17,7 +26,7 @@ describe("home page", () => {
   });
 
   it("clearly identifies the dashboard data as a demo", () => {
-    render(<Home />);
+    renderHome();
 
     expect(screen.getByRole("note").textContent).toContain(
       "Sample data only — nothing here is saved or real.",
@@ -25,7 +34,7 @@ describe("home page", () => {
   });
 
   it("provides labeled desktop and mobile navigation", () => {
-    render(<Home />);
+    renderHome();
 
     expect(screen.getByRole("navigation", { name: "Main navigation" })).toBeTruthy();
     expect(screen.getByRole("navigation", { name: "Mobile navigation" })).toBeTruthy();
@@ -39,7 +48,7 @@ describe("home page", () => {
   });
 
   it("labels the search field for assistive technology", () => {
-    render(<Home />);
+    renderHome();
 
     expect(screen.getByRole("textbox", { name: "Search expenses" })).toBeTruthy();
   });

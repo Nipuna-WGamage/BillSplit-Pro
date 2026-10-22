@@ -14,9 +14,11 @@ balance calculations, and settlements will be added incrementally.
 - Vitest and React Testing Library
 - Planned backend: Supabase Auth and PostgreSQL with Row Level Security
 
-The current application provides a responsive dashboard shell populated with
-clearly labeled demo data. It does not yet include authentication, persistent
-data, working expense management, or financial calculations.
+The current application provides a responsive dashboard and demo-only group
+and member management. Group creation and member changes live in browser
+memory and reset on refresh; nothing is saved to a backend. Authentication,
+persistent data, expense management, and financial calculations are not
+implemented yet.
 
 ## Getting started
 
@@ -32,10 +34,10 @@ Open [http://localhost:3000](http://localhost:3000) to view the application.
 ## Architecture
 
 The web application uses the Next.js App Router in `src/app/`. Route pages and
-layouts compose the interface; reusable UI belongs in `src/components/` as it
-is introduced. Keep domain logic, input validation, and financial calculations
-in framework-independent modules under `src/lib/`, with tests alongside or
-under a `__tests__/` directory.
+layouts compose the interface; reusable UI belongs in `src/components/`.
+Framework-independent group types and validation live in `src/lib/groups.ts`;
+future financial calculations should also live in `src/lib/` and remain
+separate from React. Tests live alongside the code they cover.
 
 Future backend work will add Supabase migrations and server-side access
 boundaries. PostgreSQL Row Level Security is required for authorization;
@@ -72,9 +74,8 @@ Use `npm run test:watch` while developing tests.
 ## Project structure
 
 - `src/app/` — App Router routes, layouts, and global styles
-- `src/components/` — reusable UI components as they are introduced
-- `src/lib/` — framework-independent domain logic and validation as they are
-  introduced
+- `src/components/groups/` — demo group state and group management screens
+- `src/lib/` — framework-independent group types, demo data, and validation
 - `public/` — static assets
 - `next.config.ts` — Next.js configuration
 - `vitest.config.mts` — Vitest and jsdom configuration

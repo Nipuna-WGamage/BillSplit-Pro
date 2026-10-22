@@ -1,4 +1,8 @@
+"use client";
+
+import Link from "next/link";
 import type { ReactNode } from "react";
+import { useGroups } from "@/components/groups/group-provider";
 
 type IconName =
   | "activity"
@@ -114,7 +118,7 @@ function Icon({ name, className }: { name: IconName; className?: string }) {
 
 const navigation = [
   { label: "Overview", href: "#overview", icon: "grid" },
-  { label: "Groups", href: "#your-groups", icon: "users" },
+  { label: "Groups", href: "/groups", icon: "users" },
   { label: "Expenses", href: "#recent-activity", icon: "receipt" },
   { label: "Balances", href: "#balances", icon: "wallet" },
 ] as const;
@@ -149,12 +153,6 @@ const expenses = [
   },
 ];
 
-const groups = [
-  { name: "Maple House", members: "4 members", amount: "LKR 12,640", tone: "group-green" },
-  { name: "Beach Weekend", members: "5 members", amount: "LKR 8,250", tone: "group-blue" },
-  { name: "Family", members: "3 members", amount: "LKR 2,100", tone: "group-yellow" },
-];
-
 function BrandMark() {
   return (
     <span className="brand-mark" aria-hidden="true">
@@ -173,7 +171,7 @@ function NavigationLinks({ mobile = false }: { mobile?: boolean }) {
       className={mobile ? "mobile-nav" : "side-nav"}
     >
       {navigation.map((item, index) => (
-        <a
+        <Link
           aria-current={index === 0 ? "page" : undefined}
           className={`nav-link${index === 0 ? " nav-link-active" : ""}`}
           href={item.href}
@@ -184,7 +182,7 @@ function NavigationLinks({ mobile = false }: { mobile?: boolean }) {
           {item.label === "Balances" && !mobile ? (
             <span className="nav-count">2</span>
           ) : null}
-        </a>
+        </Link>
       ))}
     </nav>
   );
@@ -202,6 +200,8 @@ function AvatarStack() {
 }
 
 export default function Home() {
+  const { groups } = useGroups();
+
   return (
     <div className="app-shell">
       <aside className="sidebar">
@@ -360,10 +360,12 @@ export default function Home() {
                 <span className="summary-label">Active groups</span>
                 <span className="summary-menu" aria-hidden="true">···</span>
               </div>
-              <p className="summary-value summary-value-dark">3 <span className="summary-unit">groups</span></p>
+              <p className="summary-value summary-value-dark">{groups.length} <span className="summary-unit">groups</span></p>
               <div className="summary-foot">
                 <AvatarStack />
-                <span className="summary-subtle">12 members total</span>
+                <span className="summary-subtle">
+                  {groups.reduce((total, group) => total + group.members.length, 0)} members total
+                </span>
               </div>
             </article>
           </section>
@@ -474,26 +476,26 @@ export default function Home() {
                   <p className="panel-kicker">YOUR SPACES</p>
                   <h2 id="groups-heading">Your groups</h2>
                 </div>
-                <a aria-label="View all groups" className="panel-arrow" href="#overview">
+                <Link aria-label="View all groups" className="panel-arrow" href="/groups">
                   <Icon name="arrowRight" />
-                </a>
+                </Link>
               </div>
               <div className="group-list">
-                {groups.map((group) => (
-                  <a className="group-row" href="#recent-activity" key={group.name}>
-                    <span className={`group-mark ${group.tone}`}>
+                {groups.map((group, index) => (
+                  <Link className="group-row" href={`/groups/${group.id}`} key={group.id}>
+                    <span className={`group-mark ${["group-green", "group-blue", "group-yellow"][index % 3]}`}>
                       <Icon name="home" />
                     </span>
                     <span className="group-copy">
                       <strong>{group.name}</strong>
-                      <span>{group.members}</span>
+                      <span>{group.members.length} {group.members.length === 1 ? "member" : "members"}</span>
                     </span>
                     <span className="group-amount">
-                      <strong>{group.amount}</strong>
+                      <strong>LKR {group.monthlySpend.toLocaleString("en-LK")}</strong>
                       <span>this month</span>
                     </span>
                     <Icon className="group-chevron" name="arrowRight" />
-                  </a>
+                  </Link>
                 ))}
               </div>
             </article>
