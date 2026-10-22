@@ -14,8 +14,9 @@ balance calculations, and settlements will be added incrementally.
 - Vitest and React Testing Library
 - Planned backend: Supabase Auth and PostgreSQL with Row Level Security
 
-The current application is the initial scaffold. It does not yet include
-authentication, persistent data, or financial calculations.
+The current application provides a responsive dashboard shell populated with
+clearly labeled demo data. It does not yet include authentication, persistent
+data, working expense management, or financial calculations.
 
 ## Getting started
 
