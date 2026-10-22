@@ -58,6 +58,11 @@ export function AuthForm({ mode }: AuthFormProps) {
                 : "Sign in"}
           </button>
         </form>
+        {!isSignup ? (
+          <p className="auth-switch">
+            <Link href="/forgot-password">Forgot your password?</Link>
+          </p>
+        ) : null}
         <p className="auth-switch">
           {isSignup ? "Already have an account?" : "New to BillSplit Pro?"}{" "}
           <Link href={isSignup ? "/login" : "/signup"}>

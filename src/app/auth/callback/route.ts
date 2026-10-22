@@ -41,11 +41,12 @@ export async function GET(request: NextRequest) {
 
 function isEmailOtpType(
   value: string | null,
-): value is "email" | "signup" | "magiclink" | "invite" {
+): value is "email" | "signup" | "magiclink" | "invite" | "recovery" {
   return (
     value === "email" ||
     value === "signup" ||
     value === "magiclink" ||
-    value === "invite"
+    value === "invite" ||
+    value === "recovery"
   );
 }

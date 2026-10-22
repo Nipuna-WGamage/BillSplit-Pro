@@ -57,7 +57,11 @@ Open [http://localhost:3000](http://localhost:3000) to view the application.
    and the **Magic Link** template to use the same URL with
    `type=magiclink`. This sends the one-time token to the callback for
    server-side verification and preserves the requested invitation destination.
+   Update the **Reset Password** template to use
+   `<a href="{{ .RedirectTo }}&token_hash={{ .TokenHash }}&type=recovery">Reset password</a>`
+   so the verified session can set a new password at `/auth/reset-password`.
 6. Restart the development server, create an account at `/signup`, and sign in.
+   Use **Forgot your password?** on `/login` to request a recovery email.
 
 The application uses the publishable key with the signed-in user's session;
 never add a service-role key to the application. PostgreSQL Row Level Security
