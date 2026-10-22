@@ -41,7 +41,7 @@ describe("home page", () => {
     renderHome();
 
     expect(
-      within(screen.getByRole("region", { name: "Demo expense summary" })).getByText(
+      within(screen.getByRole("region", { name: "Expense summary" })).getByText(
         "LKR 2,940.00",
       ),
     ).toBeTruthy();

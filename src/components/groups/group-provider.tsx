@@ -64,6 +64,7 @@ type GroupContextValue = {
   pendingInvitations: PendingGroupInvitation[];
   isLoading: boolean;
   isSupabaseMode: boolean;
+  syncStatus: "demo" | "connecting" | "connected" | "error";
   persistenceError: string;
   userEmail: string;
   isGroupOwner: (groupId: string) => boolean;
@@ -116,11 +117,15 @@ export function GroupProvider({ children }: { children: ReactNode }) {
     PendingGroupInvitation[]
   >([]);
   const [ownerGroupIds, setOwnerGroupIds] = useState<Set<string>>(new Set());
+  const [syncStatus, setSyncStatus] = useState<
+    GroupContextValue["syncStatus"]
+  >(isSupabaseMode ? "connecting" : "demo");
   const [isLoading, setIsLoading] = useState(isSupabaseMode);
   const [persistenceError, setPersistenceError] = useState("");
   const [userEmail, setUserEmail] = useState("");
   const groupsRef = useRef(groups);
   const userRef = useRef<User | null>(null);
+  const groupVersionsRef = useRef(new Map<string, string>());
   const workspaceReadyRef = useRef(!isSupabaseMode);
   const requestIdRef = useRef(0);
   const mutationQueueRef = useRef<Promise<void>>(Promise.resolve());
@@ -143,6 +148,7 @@ export function GroupProvider({ children }: { children: ReactNode }) {
       if (!user) {
         groupsRef.current = [];
         setGroups([]);
+        groupVersionsRef.current.clear();
         setOwnerGroupIds(new Set());
         setPendingInvitations([]);
         setIsLoading(false);
@@ -152,7 +158,7 @@ export function GroupProvider({ children }: { children: ReactNode }) {
       setIsLoading(true);
       const { data, error } = await supabase
         .from("shared_groups")
-        .select("id, owner_id, data")
+        .select("id, owner_id, data, updated_at")
         .order("created_at", { ascending: true });
 
       if (!active || requestId !== requestIdRef.current) {
@@ -164,6 +170,7 @@ export function GroupProvider({ children }: { children: ReactNode }) {
         setGroups([]);
         groupsRef.current = [];
         setOwnerGroupIds(new Set());
+        groupVersionsRef.current.clear();
       } else {
         const rows = data ?? [];
         const savedGroups = rows.map((row) => row.data);
@@ -186,6 +193,9 @@ export function GroupProvider({ children }: { children: ReactNode }) {
           const nextGroups = savedGroups;
           setGroups(nextGroups);
           groupsRef.current = nextGroups;
+          groupVersionsRef.current = new Map(
+            rows.map((row) => [row.id, row.updated_at]),
+          );
           setOwnerGroupIds(
             new Set(rows.filter((row) => row.owner_id === user.id).map((row) => row.id)),
           );
@@ -234,6 +244,7 @@ export function GroupProvider({ children }: { children: ReactNode }) {
       if (userRef.current?.id !== nextUser?.id) {
         groupsRef.current = [];
         setGroups([]);
+        groupVersionsRef.current.clear();
         setOwnerGroupIds(new Set());
         setPendingInvitations([]);
       }
@@ -245,6 +256,55 @@ export function GroupProvider({ children }: { children: ReactNode }) {
         }
       }, 0);
     });
+
+    const realtimeChannel = supabase
+      .channel(`group-sync-${crypto.randomUUID()}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "shared_groups" },
+        () => {
+          const currentUser = userRef.current;
+          if (currentUser) {
+            window.setTimeout(() => {
+              if (active) {
+                void loadWorkspace(currentUser);
+              }
+            }, 0);
+          }
+        },
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "group_invitations" },
+        () => {
+          const currentUser = userRef.current;
+          if (currentUser) {
+            window.setTimeout(() => {
+              if (active) {
+                void loadWorkspace(currentUser);
+              }
+            }, 0);
+          }
+        },
+      )
+      .subscribe((status, error) => {
+        if (!active) {
+          return;
+        }
+
+        if (status === "SUBSCRIBED") {
+          setSyncStatus("connected");
+        } else if (
+          status === "CHANNEL_ERROR" ||
+          status === "TIMED_OUT" ||
+          (status === "CLOSED" && active)
+        ) {
+          setSyncStatus("error");
+          setPersistenceError(
+            `Live updates are unavailable${error?.message ? `. ${error.message}` : ". Refresh to check for changes."}`,
+          );
+        }
+      });
 
     void supabase.auth.getUser().then(({ data, error }) => {
       if (!active || authEventSeen) {
@@ -263,6 +323,7 @@ export function GroupProvider({ children }: { children: ReactNode }) {
     return () => {
       active = false;
       subscription.unsubscribe();
+      void supabase.removeChannel(realtimeChannel);
     };
   }, [isSupabaseMode]);
 
@@ -285,6 +346,7 @@ export function GroupProvider({ children }: { children: ReactNode }) {
         }
 
         let createdGroupId: string | null = null;
+        let savedVersion: string | null = null;
 
         if (isSupabaseMode) {
           const user = userRef.current;
@@ -317,15 +379,24 @@ export function GroupProvider({ children }: { children: ReactNode }) {
             createdGroupId = changedGroup.id;
           }
           const supabase = createClient();
-          const { error } = isNewGroup
+          const expectedVersion = groupVersionsRef.current.get(changedGroup.id);
+          if (!isNewGroup && !expectedVersion) {
+            return {
+              success: false as const,
+              error: "This group has no current version. Refresh before saving.",
+            };
+          }
+
+          const { data, error } = isNewGroup
             ? await supabase.from("shared_groups").insert({
                 id: changedGroup.id,
                 owner_id: user.id,
                 data: changedGroup,
-              })
+              }).select("updated_at").single()
             : await supabase.rpc("save_group_data", {
                 p_group_id: changedGroup.id,
                 p_data: changedGroup,
+                p_expected_updated_at: expectedVersion,
               });
 
           if (error) {
@@ -333,6 +404,23 @@ export function GroupProvider({ children }: { children: ReactNode }) {
             setPersistenceError(message);
             return { success: false as const, error: message };
           }
+
+          if (typeof data === "string") {
+            savedVersion = data;
+          } else if (data && typeof data === "object" && "updated_at" in data) {
+            const updatedAt = data.updated_at;
+            if (typeof updatedAt === "string") {
+              savedVersion = updatedAt;
+            }
+          }
+
+          if (!savedVersion) {
+            const message = "The group was saved, but its new version could not be confirmed. Refresh before making more changes.";
+            setPersistenceError(message);
+            workspaceReadyRef.current = false;
+            return { success: false as const, error: message };
+          }
+          groupVersionsRef.current.set(changedGroup.id, savedVersion);
         }
 
         groupsRef.current = update.value.groups;
@@ -358,6 +446,7 @@ export function GroupProvider({ children }: { children: ReactNode }) {
       pendingInvitations,
       isLoading,
       isSupabaseMode,
+      syncStatus,
       persistenceError,
       userEmail,
       isGroupOwner(groupId) {
@@ -709,6 +798,7 @@ export function GroupProvider({ children }: { children: ReactNode }) {
     ownerGroupIds,
     pendingInvitations,
     persistenceError,
+    syncStatus,
     userEmail,
   ]);
 

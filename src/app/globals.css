@@ -588,6 +588,26 @@ input:focus-visible {
   font-size: 10px;
 }
 
+.sync-status {
+  margin: 8px 0 0;
+  color: #77877a;
+  font-size: 10px;
+}
+
+.sync-status-connected::before {
+  content: "";
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-right: 6px;
+  border-radius: 50%;
+  background: #55a56b;
+}
+
+.sync-status-error {
+  color: #a15643;
+}
+
 .demo-notice strong {
   color: #536348;
   font-weight: 700;

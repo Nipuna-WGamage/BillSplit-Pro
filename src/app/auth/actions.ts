@@ -74,7 +74,7 @@ export async function signUp(
   const { data, error } = await supabase.auth.signUp({
     ...input,
     options: {
-      emailRedirectTo: new URL("/auth/callback", getSiteUrl()).toString(),
+      emailRedirectTo: new URL("/auth/callback?next=%2F", getSiteUrl()).toString(),
     },
   });
 

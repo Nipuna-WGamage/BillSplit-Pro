@@ -42,6 +42,34 @@ create unique index if not exists group_invitations_one_pending_email
 create index if not exists group_members_user_id_idx
   on public.group_members (user_id, group_id);
 
+do $$
+begin
+  if exists (
+    select 1 from pg_publication where pubname = 'supabase_realtime'
+  ) and not exists (
+    select 1
+    from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'shared_groups'
+  ) then
+    execute 'alter publication supabase_realtime add table public.shared_groups';
+  end if;
+
+  if exists (
+    select 1 from pg_publication where pubname = 'supabase_realtime'
+  ) and not exists (
+    select 1
+    from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'group_invitations'
+  ) then
+    execute 'alter publication supabase_realtime add table public.group_invitations';
+  end if;
+end;
+$$;
+
 create or replace function public.is_valid_group_data(p_data jsonb)
 returns boolean
 language plpgsql
@@ -92,7 +120,7 @@ begin
     member_ids := array_append(member_ids, item->>'id');
   end loop;
 
-  if cardinality(member_ids) = 0 or admin_count = 0 then
+  if cardinality(member_ids) = 0 or admin_count <> 1 then
     return false;
   end if;
 
@@ -357,8 +385,12 @@ create policy "Owners and invited users can read invitations"
     or lower(email) = lower(coalesce((select auth.jwt()->>'email'), ''))
   );
 
-create or replace function public.save_group_data(p_group_id text, p_data jsonb)
-returns void
+create or replace function public.save_group_data(
+  p_group_id text,
+  p_data jsonb,
+  p_expected_updated_at timestamptz
+)
+returns timestamptz
 language plpgsql
 security definer
 set search_path = ''
@@ -387,6 +419,10 @@ begin
 
   if not found or not public.is_group_member(p_group_id) then
     raise exception 'You are not a member of this group.';
+  end if;
+
+  if current_group.updated_at is distinct from p_expected_updated_at then
+    raise exception 'This group has changed since it was loaded. Refresh before saving to avoid overwriting another member''s changes.';
   end if;
 
   if current_group.owner_id <> (select auth.uid()) then
@@ -437,7 +473,10 @@ begin
 
   update public.shared_groups
   set data = p_data, updated_at = now()
-  where id = p_group_id;
+  where id = p_group_id
+  returning updated_at into current_group.updated_at;
+
+  return current_group.updated_at;
 end;
 $$;
 
@@ -671,11 +710,11 @@ begin
 end;
 $$;
 
-revoke all on function public.save_group_data(text, jsonb) from public, anon;
+revoke all on function public.save_group_data(text, jsonb, timestamptz) from public, anon;
 revoke all on function public.create_group_invitation(text, text, text) from public, anon;
 revoke all on function public.cancel_group_invitation(uuid) from public, anon;
 revoke all on function public.accept_group_invitation(uuid) from public, anon;
-grant execute on function public.save_group_data(text, jsonb) to authenticated;
+grant execute on function public.save_group_data(text, jsonb, timestamptz) to authenticated;
 grant execute on function public.create_group_invitation(text, text, text) to authenticated;
 grant execute on function public.cancel_group_invitation(uuid) to authenticated;
 grant execute on function public.accept_group_invitation(uuid) to authenticated;

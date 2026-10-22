@@ -28,6 +28,7 @@ export function GroupDetailPage({ groupId }: { groupId: string }) {
     isSupabaseMode,
     isGroupOwner,
     persistenceError,
+    syncStatus,
   } = useGroups();
   const group = groups.find((item) => item.id === groupId);
   const [name, setName] = useState("");
@@ -154,11 +155,20 @@ export function GroupDetailPage({ groupId }: { groupId: string }) {
 
       <div className="groups-content group-detail-content">
         {isSupabaseMode ? (
-          <div className="demo-notice groups-demo-notice" role="note">
-            <span className="demo-indicator" />
-            <span><strong>Shared group</strong><span className="demo-separator">·</span>Changes are saved for everyone in this group.</span>
-            <span className="demo-tag">SHARED</span>
-          </div>
+          <>
+            <div className="demo-notice groups-demo-notice" role="note">
+              <span className="demo-indicator" />
+              <span><strong>Shared group</strong><span className="demo-separator">·</span>Changes are saved for everyone in this group.</span>
+              <span className="demo-tag">SHARED</span>
+            </div>
+            <p className={`sync-status sync-status-${syncStatus}`} role="status">
+              {syncStatus === "connected"
+                ? "Live group updates are on."
+                : syncStatus === "error"
+                  ? "Live updates unavailable. Refresh to check for changes."
+                  : "Connecting to live group updates…"}
+            </p>
+          </>
         ) : (
           <div className="demo-notice groups-demo-notice" role="note">
             <span className="demo-indicator" />

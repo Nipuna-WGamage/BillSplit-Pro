@@ -5,7 +5,9 @@ import type { ReactNode } from "react";
 import { AccountControls } from "@/components/auth/account-controls";
 import { useGroups } from "@/components/groups/group-provider";
 import { calculateGroupBalances } from "@/lib/balances";
+import { calculateDashboardUserBalance } from "@/lib/dashboard";
 import { formatLkr } from "@/lib/expenses";
+import type { GroupMember } from "@/lib/groups";
 
 type IconName =
   | "activity"
@@ -167,13 +169,30 @@ function NavigationLinks({
   );
 }
 
-function AvatarStack() {
+function AvatarStack({ members }: { members: GroupMember[] }) {
+  const visibleMembers = members.slice(0, 3);
+
   return (
-    <div aria-label="Four household members" className="avatar-stack">
-      <span className="avatar avatar-one">NP</span>
-      <span className="avatar avatar-two">AB</span>
-      <span className="avatar avatar-three">KS</span>
-      <span className="avatar avatar-more">+1</span>
+    <div aria-label={`${members.length} unique group members`} className="avatar-stack">
+      {visibleMembers.map((member, index) => (
+        <span
+          aria-label={member.name}
+          className={`avatar avatar-${["one", "two", "three"][index]}`}
+          key={`${member.email}-${member.id}`}
+          title={member.name}
+        >
+          {member.name
+            .split(/\s+/)
+            .slice(0, 2)
+            .map((part) => part[0]?.toLocaleUpperCase() ?? "")
+            .join("")}
+        </span>
+      ))}
+      {members.length > visibleMembers.length ? (
+        <span className="avatar avatar-more">
+          +{members.length - visibleMembers.length}
+        </span>
+      ) : null}
     </div>
   );
 }
@@ -185,7 +204,22 @@ export default function Home() {
     isSupabaseMode,
     persistenceError,
     userEmail,
+    syncStatus,
   } = useGroups();
+  const currentUserMember = userEmail
+    ? groups
+        .flatMap((group) => group.members)
+        .find(
+          (member) =>
+            member.email.trim().toLocaleLowerCase() ===
+            userEmail.trim().toLocaleLowerCase(),
+        )
+    : undefined;
+  const currentUserName = currentUserMember?.name ??
+    (userEmail
+      ? userEmail.split("@")[0].replace(/[._-]+/g, " ")
+      : "Nipun Perera");
+  const firstName = currentUserName.split(/\s+/)[0] || "there";
   const allExpenses = groups.flatMap((group) =>
     group.expenses.map((expense) => ({
       ...expense,
@@ -223,32 +257,18 @@ export default function Home() {
         : [];
     }),
   );
-  const currentUserBalanceMinor = groupBalances.reduce(
-    (total, { group, balances }) => {
-      const admin = group.members.find((member) => member.role === "Admin");
-
-      if (!admin) {
-        return total;
-      }
-
-      const adminBalance = balances.find((balance) => balance.memberId === admin.id);
-
-      return total + (adminBalance?.balanceMinor ?? 0);
-    },
-    0,
+  const { balanceMinor: currentUserBalanceMinor, groupCount: currentUserBalanceGroupCount } =
+    calculateDashboardUserBalance(groups, userEmail, !isSupabaseMode);
+  const uniqueMembers = Array.from(
+    new Map(
+      groups
+        .flatMap((group) => group.members)
+        .map((member) => [
+          member.email.trim().toLocaleLowerCase() || member.id,
+          member,
+        ]),
+    ).values(),
   );
-  const currentUserBalanceGroupCount = groupBalances.filter(
-    ({ group, balances }) => {
-      const admin = group.members.find((member) => member.role === "Admin");
-
-      return admin
-        ? balances.some(
-            (balance) =>
-              balance.memberId === admin.id && balance.balanceMinor !== 0,
-          )
-        : false;
-    },
-  ).length;
   const topBalances = [...balanceRows]
     .sort(
       (first, second) =>
@@ -294,7 +314,7 @@ export default function Home() {
               {userEmail ? userEmail.slice(0, 2).toLocaleUpperCase() : "NP"}
             </span>
             <span className="profile-copy">
-              <strong>{userEmail || "Nipun Perera"}</strong>
+              <strong>{currentUserName}</strong>
               <span>{isSupabaseMode ? "Account" : "Home admin"}</span>
             </span>
             <Icon className="workspace-chevron" name="chevronDown" />
@@ -359,13 +379,25 @@ export default function Home() {
             </span>
             <span className="demo-tag">{isSupabaseMode ? "SHARED" : "PREVIEW"}</span>
           </div>
+          {isSupabaseMode ? (
+            <p
+              className={`sync-status sync-status-${syncStatus}`}
+              role="status"
+            >
+              {syncStatus === "connected"
+                ? "Live group updates are on."
+                : syncStatus === "error"
+                  ? "Live updates unavailable. Refresh to check for changes."
+                  : "Connecting to live group updates…"}
+            </p>
+          ) : null}
           {persistenceError ? <p className="form-error" role="alert">{persistenceError}</p> : null}
           {isLoading ? <p className="form-success" role="status">Loading your groups…</p> : null}
 
           <section aria-labelledby="welcome-heading" className="welcome-row">
             <div>
               <p className="eyebrow">THURSDAY, OCTOBER 22, 2026</p>
-              <h1 id="welcome-heading">Good afternoon, Nipun <span aria-hidden="true">✦</span></h1>
+              <h1 id="welcome-heading">Good afternoon, {firstName} <span aria-hidden="true">✦</span></h1>
               <p className="welcome-copy">Here&apos;s what&apos;s happening with your shared expenses.</p>
             </div>
             <a className="period-select" href="#monthly-overview">
@@ -375,7 +407,7 @@ export default function Home() {
             </a>
           </section>
 
-          <section aria-label="Demo expense summary" className="summary-grid">
+          <section aria-label="Expense summary" className="summary-grid">
             <article className="summary-card summary-primary">
               <div className="summary-topline">
                 <span className="summary-icon summary-icon-light">
@@ -429,7 +461,7 @@ export default function Home() {
               </div>
               <p className="summary-value summary-value-dark">{groups.length} <span className="summary-unit">groups</span></p>
               <div className="summary-foot">
-                <AvatarStack />
+                <AvatarStack members={uniqueMembers} />
                 <span className="summary-subtle">
                   {groups.reduce((total, group) => total + group.members.length, 0)} members total
                 </span>
@@ -497,7 +529,9 @@ export default function Home() {
                   </span>
                 </div>
               )) : (
-                <p className="balance-empty">Everyone is settled up in the demo groups.</p>
+                <p className="balance-empty">
+                  Everyone is settled up in {isSupabaseMode ? "your groups" : "the demo groups"}.
+                </p>
               )}
               <div className="balance-summary">
                 <span className="balance-summary-icon">
@@ -505,7 +539,9 @@ export default function Home() {
                 </span>
                 <span>
                   <strong>Keep things balanced</strong>
-                  <span>Based on equal splits of demo expenses</span>
+                  <span>
+                    Based on equal splits of {isSupabaseMode ? "group expenses" : "demo expenses"}
+                  </span>
                 </span>
               </div>
             </article>

@@ -47,18 +47,23 @@ Open [http://localhost:3000](http://localhost:3000) to view the application.
    group-scoped schema.
 4. In Supabase Auth URL configuration, set the Site URL to your application
    origin. Allow `http://localhost:3000/**` for local development and
-   `<site-url>/auth/callback**` for the deployed app. Configure email delivery
-   and the Supabase email templates to use `{{ .RedirectTo }}` so the
-   invitation's callback destination is preserved.
-5. Restart the development server, create an account at `/signup`, and sign in.
+   `<site-url>/auth/callback**` for the deployed app.
+5. Configure email delivery. Update the **Confirm signup** template link to
+   `<a href="{{ .RedirectTo }}&token_hash={{ .TokenHash }}&type=email">Confirm email</a>`
+   and the **Magic Link** template to use the same URL with
+   `type=magiclink`. This sends the one-time token to the callback for
+   server-side verification and preserves the requested invitation destination.
+6. Restart the development server, create an account at `/signup`, and sign in.
 
 The application uses the publishable key with the signed-in user's session;
 never add a service-role key to the application. PostgreSQL Row Level Security
 restricts each group to its accepted members. Group details, members, expenses,
 and settlements remain in a validated JSON document per group, while relational
-membership records control access. Invitation acceptance verifies that the
-signed-in account email matches the invitation. When Supabase isn't configured,
-the app stays in demo mode instead of attempting network writes.
+membership records control access. Updates are broadcast through Supabase
+Realtime; version checks reject stale writes instead of silently overwriting
+another member's changes. Invitation acceptance verifies that the signed-in
+account email matches the invitation. When Supabase isn't configured, the app
+stays in demo mode instead of attempting network writes.
 
 ## Architecture
 
