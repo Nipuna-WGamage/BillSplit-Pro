@@ -1,7 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { isSupabaseConfigured } from "@/lib/supabase/config";
+import { getSiteUrl, isSupabaseConfigured } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/server";
 
 export type AuthFormState = {
@@ -74,7 +74,7 @@ export async function signUp(
   const { data, error } = await supabase.auth.signUp({
     ...input,
     options: {
-      emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"}/auth/callback`,
+      emailRedirectTo: new URL("/auth/callback", getSiteUrl()).toString(),
     },
   });
 

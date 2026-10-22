@@ -149,7 +149,7 @@ export function ExpenseManagement({ groupId }: ExpenseManagementProps) {
     setPendingDeleteId(null);
     setNotice(
       isSupabaseMode
-        ? "Expense removed from your saved workspace."
+        ? "Expense removed from this saved group."
         : "Expense removed from this demo.",
     );
   }

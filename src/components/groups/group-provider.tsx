@@ -11,6 +11,11 @@ import {
 } from "react";
 import type { User } from "@supabase/supabase-js";
 import {
+  cancelGroupInvitation,
+  inviteGroupMember,
+  type InvitationResult,
+} from "@/app/groups/actions";
+import {
   createExpense as createDemoExpense,
   deleteExpense as deleteDemoExpense,
   expenseCategories,
@@ -46,12 +51,22 @@ type AddMemberInput = {
   email: string;
 };
 
+export type PendingGroupInvitation = {
+  id: string;
+  groupId: string;
+  email: string;
+  displayName: string;
+  expiresAt: string;
+};
+
 type GroupContextValue = {
   groups: DemoGroup[];
+  pendingInvitations: PendingGroupInvitation[];
   isLoading: boolean;
   isSupabaseMode: boolean;
   persistenceError: string;
   userEmail: string;
+  isGroupOwner: (groupId: string) => boolean;
   createGroup: (input: CreateGroupInput) => Promise<MutationResult<DemoGroup>>;
   addMember: (
     groupId: string,
@@ -61,6 +76,7 @@ type GroupContextValue = {
     groupId: string,
     memberId: string,
   ) => Promise<MutationResult<DemoGroup>>;
+  cancelInvitation: (invitationId: string) => Promise<MutationResult<true>>;
   createExpense: (
     groupId: string,
     input: ExpenseInput,
@@ -96,6 +112,10 @@ export function GroupProvider({ children }: { children: ReactNode }) {
   const [groups, setGroups] = useState<DemoGroup[]>(
     isSupabaseMode ? [] : initialDemoGroups,
   );
+  const [pendingInvitations, setPendingInvitations] = useState<
+    PendingGroupInvitation[]
+  >([]);
+  const [ownerGroupIds, setOwnerGroupIds] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(isSupabaseMode);
   const [persistenceError, setPersistenceError] = useState("");
   const [userEmail, setUserEmail] = useState("");
@@ -123,40 +143,83 @@ export function GroupProvider({ children }: { children: ReactNode }) {
       if (!user) {
         groupsRef.current = [];
         setGroups([]);
+        setOwnerGroupIds(new Set());
+        setPendingInvitations([]);
         setIsLoading(false);
         return;
       }
 
       setIsLoading(true);
       const { data, error } = await supabase
-        .from("user_workspaces")
-        .select("groups")
-        .eq("user_id", user.id)
-        .maybeSingle();
+        .from("shared_groups")
+        .select("id, owner_id, data")
+        .order("created_at", { ascending: true });
 
       if (!active || requestId !== requestIdRef.current) {
         return;
       }
 
       if (error) {
-        setPersistenceError(`Could not load your workspace. ${error.message}`);
+        setPersistenceError(`Could not load your shared groups. ${error.message}`);
         setGroups([]);
         groupsRef.current = [];
+        setOwnerGroupIds(new Set());
       } else {
-        const savedGroups = data?.groups;
+        const rows = data ?? [];
+        const savedGroups = rows.map((row) => row.data);
 
-        if (savedGroups !== undefined && !isDemoGroupArray(savedGroups)) {
+        if (!isDemoGroupArray(savedGroups) || rows.some((row, index) => {
+          const group = savedGroups[index];
+          return (
+            !isRecord(group) ||
+            row.id !== group.id ||
+            typeof row.owner_id !== "string"
+          );
+        })) {
           setPersistenceError(
-            "Saved workspace data has an unexpected format. It was not loaded.",
+            "Saved shared group data has an unexpected format. It was not loaded.",
           );
           setGroups([]);
           groupsRef.current = [];
+          setOwnerGroupIds(new Set());
         } else {
-          const nextGroups = savedGroups ?? [];
+          const nextGroups = savedGroups;
           setGroups(nextGroups);
           groupsRef.current = nextGroups;
+          setOwnerGroupIds(
+            new Set(rows.filter((row) => row.owner_id === user.id).map((row) => row.id)),
+          );
           workspaceReadyRef.current = true;
         }
+      }
+
+      const { data: invitations, error: invitationError } = await supabase
+        .from("group_invitations")
+        .select("id, group_id, email, display_name, expires_at")
+        .eq("created_by", user.id)
+        .is("accepted_at", null)
+        .is("cancelled_at", null)
+        .gt("expires_at", new Date().toISOString());
+
+      if (!active || requestId !== requestIdRef.current) {
+        return;
+      }
+
+      if (invitationError) {
+        setPersistenceError(
+          `Could not load pending group invitations. ${invitationError.message}`,
+        );
+        setPendingInvitations([]);
+      } else {
+        setPendingInvitations(
+          (invitations ?? []).map((invitation) => ({
+            id: invitation.id,
+            groupId: invitation.group_id,
+            email: invitation.email,
+            displayName: invitation.display_name,
+            expiresAt: invitation.expires_at,
+          })),
+        );
       }
 
       setIsLoading(false);
@@ -171,6 +234,8 @@ export function GroupProvider({ children }: { children: ReactNode }) {
       if (userRef.current?.id !== nextUser?.id) {
         groupsRef.current = [];
         setGroups([]);
+        setOwnerGroupIds(new Set());
+        setPendingInvitations([]);
       }
       userRef.current = nextUser;
       workspaceReadyRef.current = false;
@@ -219,6 +284,8 @@ export function GroupProvider({ children }: { children: ReactNode }) {
           return update;
         }
 
+        let createdGroupId: string | null = null;
+
         if (isSupabaseMode) {
           const user = userRef.current;
 
@@ -229,19 +296,40 @@ export function GroupProvider({ children }: { children: ReactNode }) {
             };
           }
 
-          const { error } = await createClient()
-            .from("user_workspaces")
-            .upsert(
-              {
-                user_id: user.id,
-                groups: update.value.groups,
-                updated_at: new Date().toISOString(),
-              },
-              { onConflict: "user_id" },
+          const changedGroup = update.value.groups.find((nextGroup) => {
+            const existingGroup = groupsRef.current.find(
+              (group) => group.id === nextGroup.id,
             );
+            return existingGroup !== nextGroup;
+          });
+
+          if (!changedGroup) {
+            return {
+              success: false as const,
+              error: "No group changes were found to save.",
+            };
+          }
+
+          const isNewGroup = !groupsRef.current.some(
+            (group) => group.id === changedGroup.id,
+          );
+          if (isNewGroup) {
+            createdGroupId = changedGroup.id;
+          }
+          const supabase = createClient();
+          const { error } = isNewGroup
+            ? await supabase.from("shared_groups").insert({
+                id: changedGroup.id,
+                owner_id: user.id,
+                data: changedGroup,
+              })
+            : await supabase.rpc("save_group_data", {
+                p_group_id: changedGroup.id,
+                p_data: changedGroup,
+              });
 
           if (error) {
-            const message = `Could not save your changes. ${error.message}`;
+            const message = `Could not save your group changes. ${error.message}`;
             setPersistenceError(message);
             return { success: false as const, error: message };
           }
@@ -249,6 +337,10 @@ export function GroupProvider({ children }: { children: ReactNode }) {
 
         groupsRef.current = update.value.groups;
         setGroups(update.value.groups);
+        const newGroupId = createdGroupId;
+        if (newGroupId) {
+          setOwnerGroupIds((current) => new Set([...current, newGroupId]));
+        }
         setPersistenceError("");
         return { success: true as const, value: update.value.value };
       });
@@ -263,10 +355,14 @@ export function GroupProvider({ children }: { children: ReactNode }) {
 
     return {
       groups,
+      pendingInvitations,
       isLoading,
       isSupabaseMode,
       persistenceError,
       userEmail,
+      isGroupOwner(groupId) {
+        return !isSupabaseMode || ownerGroupIds.has(groupId);
+      },
       createGroup(input) {
         return enqueueMutation((current) => {
           const result = createDemoGroup(input, current);
@@ -280,6 +376,7 @@ export function GroupProvider({ children }: { children: ReactNode }) {
             isSupabaseMode && userEmail
               ? {
                   ...result.value,
+                  id: `${userRef.current?.id}-${result.value.id}`,
                   members: result.value.members.map((member) =>
                     member.role === "Admin"
                       ? {
@@ -302,6 +399,63 @@ export function GroupProvider({ children }: { children: ReactNode }) {
         });
       },
       addMember(groupId, input) {
+        if (isSupabaseMode) {
+          return (async () => {
+            if (!workspaceReadyRef.current) {
+              return {
+                success: false as const,
+                error: "Your groups are still loading. Try again in a moment.",
+              };
+            }
+
+            const group = groupsRef.current.find((item) => item.id === groupId);
+
+            if (!group) {
+              return { success: false as const, error: "This group could not be found." };
+            }
+
+            if (!ownerGroupIds.has(groupId)) {
+              return {
+                success: false as const,
+                error: "Only the group owner can invite members.",
+              };
+            }
+
+            const normalizedEmail = input.email.trim().toLocaleLowerCase();
+            const validation = addDemoGroupMember(
+              {
+                ...group,
+                members: group.members.filter(
+                  (member) => member.email.toLocaleLowerCase() !== normalizedEmail,
+                ),
+              },
+              input,
+            );
+
+            if (!validation.success) {
+              return validation;
+            }
+
+            const result: InvitationResult = await inviteGroupMember({
+              groupId,
+              email: input.email,
+              displayName: input.name,
+            });
+
+            if (!result.success) {
+              setPersistenceError(result.error);
+              return result;
+            }
+
+            setPendingInvitations((current) => [
+              ...current.filter((item) => item.id !== result.invitation.id),
+              result.invitation,
+            ]);
+            setPersistenceError("");
+            return { success: true as const, value: group };
+          })();
+        }
+
         return enqueueMutation((current) => {
           const group = current.find((item) => item.id === groupId);
 
@@ -325,6 +479,22 @@ export function GroupProvider({ children }: { children: ReactNode }) {
             },
           };
         });
+      },
+      cancelInvitation(invitationId) {
+        return (async () => {
+          const result = await cancelGroupInvitation(invitationId);
+
+          if (!result.success) {
+            setPersistenceError(result.error);
+            return result;
+          }
+
+          setPendingInvitations((current) =>
+            current.filter((invitation) => invitation.id !== invitationId),
+          );
+          setPersistenceError("");
+          return { success: true as const, value: true as const };
+        })();
       },
       removeMember(groupId, memberId) {
         return enqueueMutation((current) => {
@@ -532,7 +702,15 @@ export function GroupProvider({ children }: { children: ReactNode }) {
         });
       },
     };
-  }, [groups, isLoading, isSupabaseMode, persistenceError, userEmail]);
+  }, [
+    groups,
+    isLoading,
+    isSupabaseMode,
+    ownerGroupIds,
+    pendingInvitations,
+    persistenceError,
+    userEmail,
+  ]);
 
   return <GroupContext.Provider value={value}>{children}</GroupContext.Provider>;
 }

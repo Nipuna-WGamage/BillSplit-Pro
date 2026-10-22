@@ -2763,6 +2763,52 @@ p {
   margin-top: 14px;
 }
 
+.pending-invitations {
+  margin-top: 15px;
+}
+
+.pending-invitations h3 {
+  margin: 0 0 7px;
+  color: #68756a;
+  font-size: 9px;
+  font-weight: 650;
+}
+
+.pending-invitations ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pending-invitations li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border-top: 1px solid #eff1ee;
+  padding: 7px 0;
+}
+
+.pending-invitations li > span {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.pending-invitations li strong,
+.pending-invitations li > span > span {
+  overflow: hidden;
+  color: #69756b;
+  font-size: 8px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pending-invitations li > span > span {
+  color: #929c94;
+}
+
 .member-submit {
   width: 100%;
   margin-top: 2px;

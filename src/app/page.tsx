@@ -351,16 +351,16 @@ export default function Home() {
           <div className="demo-notice" role="note">
             <span className="demo-indicator" />
             <span>
-              <strong>{isSupabaseMode ? "Saved workspace" : "Demo workspace"}</strong>
+              <strong>{isSupabaseMode ? "Shared groups" : "Demo workspace"}</strong>
               <span className="demo-separator">·</span>
               {isSupabaseMode
-                ? "Your groups and expenses are saved to your private account."
+                ? "Your groups and expenses are shared with their accepted members."
                 : "Sample data only — nothing here is saved or real."}
             </span>
-            <span className="demo-tag">{isSupabaseMode ? "PRIVATE" : "PREVIEW"}</span>
+            <span className="demo-tag">{isSupabaseMode ? "SHARED" : "PREVIEW"}</span>
           </div>
           {persistenceError ? <p className="form-error" role="alert">{persistenceError}</p> : null}
-          {isLoading ? <p className="form-success" role="status">Loading your saved workspace…</p> : null}
+          {isLoading ? <p className="form-success" role="status">Loading your groups…</p> : null}
 
           <section aria-labelledby="welcome-heading" className="welcome-row">
             <div>
@@ -410,7 +410,9 @@ export default function Home() {
               </div>
               <p className="summary-value summary-value-dark">{formatLkr(sharedSpendMinor)}</p>
               <div className="summary-foot">
-                <span className="summary-subtle">Across demo groups</span>
+                <span className="summary-subtle">
+                  Across {isSupabaseMode ? "shared groups" : "demo groups"}
+                </span>
                 <span className="mini-bars" aria-hidden="true">
                   <i /><i /><i /><i /><i /><i /><i /><i /><i />
                 </span>

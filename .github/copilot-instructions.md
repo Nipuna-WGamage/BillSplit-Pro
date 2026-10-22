@@ -6,9 +6,10 @@
 - Follow the current Next.js App Router, React, TypeScript, and Tailwind CSS
   stack. Read the installed Next.js documentation in
   `node_modules/next/dist/docs/` before changing Next.js APIs or conventions.
-- Supabase Auth and PostgreSQL with Row Level Security are planned backend
-  choices; do not claim the app is persistent or authenticated until those
-  features exist.
+- Supabase Auth and PostgreSQL with Row Level Security provide authentication
+  and group-scoped persistence. Group invitations must be accepted by the
+  invited email account; never bypass membership checks or use a service-role
+  key in client-facing code.
 - The initial currency is LKR. Do not implement real payment processing.
 
 ## Architecture and implementation

@@ -22,8 +22,11 @@ export function GroupDetailPage({ groupId }: { groupId: string }) {
     groups,
     addMember,
     removeMember,
+    cancelInvitation,
+    pendingInvitations,
     isLoading,
     isSupabaseMode,
+    isGroupOwner,
     persistenceError,
   } = useGroups();
   const group = groups.find((item) => item.id === groupId);
@@ -31,10 +34,11 @@ export function GroupDetailPage({ groupId }: { groupId: string }) {
   const [email, setEmail] = useState("");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [invitePending, setInvitePending] = useState(false);
   const groupName = group?.name ?? "";
 
   if (isLoading) {
-    return <main className="groups-screen"><p role="status">Loading your saved workspace…</p></main>;
+    return <main className="groups-screen"><p role="status">Loading your groups…</p></main>;
   }
 
   if (!group) {
@@ -50,7 +54,7 @@ export function GroupDetailPage({ groupId }: { groupId: string }) {
         <section className="group-not-found">
           <span aria-hidden="true" className="group-not-found-icon">?</span>
           <h1>Group not found</h1>
-          <p>{persistenceError || "This group is not part of your saved workspace."}</p>
+          <p>{persistenceError || "This group is not available to your account."}</p>
           {persistenceError ? <p className="form-error" role="alert">{persistenceError}</p> : null}
           <Link className="primary-action" href="/groups">Go to groups</Link>
         </section>
@@ -63,22 +67,63 @@ export function GroupDetailPage({ groupId }: { groupId: string }) {
     group.expenses,
     group.settlements,
   );
+  const canManageGroup = isGroupOwner(groupId);
+  const groupInvitations = pendingInvitations.filter(
+    (invitation) => invitation.groupId === groupId,
+  );
 
   async function handleAddMember(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError("");
     setNotice("");
+    setInvitePending(true);
 
-    const result = await addMember(groupId, { name, email });
+    try {
+      const result = await addMember(groupId, { name, email });
 
-    if (!result.success) {
-      setError(result.error);
-      return;
+      if (!result.success) {
+        setError(result.error);
+        return;
+      }
+
+      setName("");
+      setEmail("");
+      setNotice(
+        isSupabaseMode
+          ? `Sign-in invitation sent to ${email.trim().toLocaleLowerCase()}.`
+          : `${result.value.members.at(-1)?.name ?? "Member"} added to ${groupName}.`,
+      );
+    } catch (caught) {
+      setError(
+        caught instanceof Error
+          ? caught.message
+          : "Could not send the group invitation.",
+      );
+    } finally {
+      setInvitePending(false);
     }
+  }
 
-    setName("");
-    setEmail("");
-    setNotice(`${result.value.members.at(-1)?.name ?? "Member"} added to ${groupName}.`);
+  async function handleCancelInvitation(invitationId: string) {
+    setError("");
+    setNotice("");
+
+    try {
+      const result = await cancelInvitation(invitationId);
+
+      if (!result.success) {
+        setError(result.error);
+        return;
+      }
+
+      setNotice("Invitation cancelled.");
+    } catch (caught) {
+      setError(
+        caught instanceof Error
+          ? caught.message
+          : "Could not cancel the group invitation.",
+      );
+    }
   }
 
   async function handleRemoveMember(memberId: string, memberName: string) {
@@ -111,8 +156,8 @@ export function GroupDetailPage({ groupId }: { groupId: string }) {
         {isSupabaseMode ? (
           <div className="demo-notice groups-demo-notice" role="note">
             <span className="demo-indicator" />
-            <span><strong>Saved workspace</strong><span className="demo-separator">·</span>Changes are saved to your account.</span>
-            <span className="demo-tag">PRIVATE</span>
+            <span><strong>Shared group</strong><span className="demo-separator">·</span>Changes are saved for everyone in this group.</span>
+            <span className="demo-tag">SHARED</span>
           </div>
         ) : (
           <div className="demo-notice groups-demo-notice" role="note">
@@ -141,7 +186,7 @@ export function GroupDetailPage({ groupId }: { groupId: string }) {
             <div>
               <span className="group-category-pill">{group.category}</span>
               <h1 id="group-detail-title">{group.name}</h1>
-              <p>{group.description || "A demo group ready for shared expenses."}</p>
+              <p>{group.description || "A group ready for shared expenses."}</p>
             </div>
           </div>
           <div className="group-detail-location">
@@ -159,7 +204,11 @@ export function GroupDetailPage({ groupId }: { groupId: string }) {
               </div>
               <span className="group-category-pill">LKR</span>
             </div>
-            <p className="member-intro">Manage the demo members who share this space.</p>
+            <p className="member-intro">
+              {isSupabaseMode
+                ? "People with an accepted invitation can access this group's shared expenses."
+                : "Manage the demo members who share this space."}
+            </p>
             {error ? <p className="form-error" role="alert">{error}</p> : null}
             {notice ? <p className="form-success" role="status">{notice}</p> : null}
             <ul className="member-list">
@@ -177,6 +226,8 @@ export function GroupDetailPage({ groupId }: { groupId: string }) {
                   </span>
                   {member.role === "Admin" ? (
                     <span className="member-protected">Group admin</span>
+                  ) : !canManageGroup ? (
+                    <span className="member-protected">Group member</span>
                   ) : (
                     <button
                       aria-label={`Remove ${member.name} from ${group.name}`}
@@ -202,7 +253,7 @@ export function GroupDetailPage({ groupId }: { groupId: string }) {
                 <div><dt>Location</dt><dd>{group.location || "Not set"}</dd></div>
                 <div><dt>Currency</dt><dd>LKR <span>Sri Lankan Rupee</span></dd></div>
                 <div>
-                  <dt>Demo expense total</dt>
+                  <dt>{isSupabaseMode ? "Group expense total" : "Demo expense total"}</dt>
                   <dd>
                     LKR {(group.expenses.reduce((total, expense) => total + expense.amountMinor, 0) / 100)
                       .toLocaleString("en-LK", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -213,9 +264,39 @@ export function GroupDetailPage({ groupId }: { groupId: string }) {
 
             <section aria-labelledby="add-member-title" className="group-detail-panel add-member-panel">
               <p className="panel-kicker">GROW YOUR GROUP</p>
-              <h2 id="add-member-title">Add a member</h2>
-              <p>Use sample details only. No invitation email will be sent.</p>
-              <form className="member-form" onSubmit={handleAddMember}>
+              <h2 id="add-member-title">{isSupabaseMode ? "Invite by email" : "Add a member"}</h2>
+              <p>
+                {isSupabaseMode
+                  ? canManageGroup
+                    ? "We will email a secure sign-in link. The invitee must use that address to join."
+                    : "Only the group owner can invite people."
+                  : "Use sample details only. No invitation email will be sent."}
+              </p>
+              {isSupabaseMode && groupInvitations.length > 0 ? (
+                <div aria-label="Pending invitations" className="pending-invitations">
+                  <h3>Pending invitations</h3>
+                  <ul>
+                    {groupInvitations.map((invitation) => (
+                      <li key={invitation.id}>
+                        <span>
+                          <strong>{invitation.displayName}</strong>
+                          <span>{invitation.email}</span>
+                        </span>
+                        {canManageGroup ? (
+                          <button
+                            className="member-remove-button"
+                            onClick={() => handleCancelInvitation(invitation.id)}
+                            type="button"
+                          >
+                            Cancel
+                          </button>
+                        ) : null}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+              {canManageGroup ? <form className="member-form" onSubmit={handleAddMember}>
                 <label className="form-field">
                   <span>Full name <span aria-hidden="true">*</span></span>
                   <input
@@ -239,10 +320,15 @@ export function GroupDetailPage({ groupId }: { groupId: string }) {
                     value={email}
                   />
                 </label>
-                <button className="primary-action member-submit" type="submit">
-                  <span aria-hidden="true">+</span> Add demo member
+                <button className="primary-action member-submit" disabled={invitePending} type="submit">
+                  <span aria-hidden="true">+</span>{" "}
+                  {invitePending
+                    ? "Sending invitation…"
+                    : isSupabaseMode
+                      ? "Send invitation"
+                      : "Add demo member"}
                 </button>
-              </form>
+              </form> : null}
             </section>
           </aside>
         </div>
@@ -256,7 +342,7 @@ export function GroupDetailPage({ groupId }: { groupId: string }) {
             <span className="group-category-pill">LKR</span>
           </div>
           <p className="group-balances-intro">
-            Based on each member&apos;s share of unsettled demo expenses. Remainder cents are assigned consistently.
+            Based on each member&apos;s share of unsettled expenses. Remainder cents are assigned consistently.
           </p>
           <ul className="group-balance-list">
             {group.members.map((member) => {

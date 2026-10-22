@@ -28,7 +28,7 @@ export function AuthForm({ mode }: AuthFormProps) {
         <h1 id="auth-title">{isSignup ? "Create an account" : "Sign in"}</h1>
         <p className="auth-description">
           {isSignup
-            ? "Your groups and expense data will be private to your account."
+            ? "Groups you create are yours to share with invited members."
             : "Sign in to access your saved groups and expenses."}
         </p>
 

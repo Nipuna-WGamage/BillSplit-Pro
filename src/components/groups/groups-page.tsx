@@ -55,8 +55,8 @@ export function GroupsPage() {
         {isSupabaseMode ? (
           <div className="demo-notice groups-demo-notice" role="note">
             <span className="demo-indicator" />
-            <span><strong>Saved workspace</strong><span className="demo-separator">·</span>Changes are saved to your account.</span>
-            <span className="demo-tag">PRIVATE</span>
+            <span><strong>Shared groups</strong><span className="demo-separator">·</span>Groups are visible to their accepted members.</span>
+            <span className="demo-tag">SHARED</span>
           </div>
         ) : (
           <div className="demo-notice groups-demo-notice" role="note">
@@ -67,7 +67,7 @@ export function GroupsPage() {
         )}
 
         {persistenceError ? <p className="form-error" role="alert">{persistenceError}</p> : null}
-        {isLoading ? <p className="form-success" role="status">Loading your saved workspace…</p> : null}
+        {isLoading ? <p className="form-success" role="status">Loading your groups…</p> : null}
 
         <section aria-labelledby="groups-title" className="groups-page-intro">
           <div>
@@ -75,7 +75,7 @@ export function GroupsPage() {
             <h1 id="groups-title">Groups &amp; members</h1>
             <p className="welcome-copy">Organize shared household costs and see who&apos;s part of each group.</p>
           </div>
-          <div aria-label={`${groups.length} demo groups`} className="groups-count">
+          <div aria-label={`${groups.length} ${isSupabaseMode ? "shared" : "demo"} groups`} className="groups-count">
             <strong>{groups.length}</strong>
             <span>{isSupabaseMode ? "saved groups" : "demo groups"}</span>
           </div>
@@ -129,7 +129,7 @@ export function GroupsPage() {
             <div>
               <p className="panel-kicker">START SOMETHING TOGETHER</p>
               <h2 id="create-group-title">Create a group</h2>
-              <p>{isSupabaseMode ? "Create a group in your saved workspace." : "Set up a demo group and add its members."}</p>
+              <p>{isSupabaseMode ? "Create a group and invite people by email." : "Set up a demo group and add its members."}</p>
             </div>
           </div>
           <form className="group-form" onSubmit={handleSubmit}>
@@ -164,7 +164,7 @@ export function GroupsPage() {
             </label>
             {error ? <p className="form-error" role="alert">{error}</p> : null}
             <div className="group-form-footer">
-              <p>{isSupabaseMode ? "Your group is saved to your private workspace." : "Demo-only — this group is not saved to a database."}</p>
+              <p>{isSupabaseMode ? "Only invited group members can access it." : "Demo-only — this group is not saved to a database."}</p>
               <button className="primary-action" type="submit">
                 {isSupabaseMode ? "Create group" : "Create demo group"}
               </button>
