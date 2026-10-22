@@ -40,11 +40,15 @@ Open [http://localhost:3000](http://localhost:3000) to view the application.
 1. Create a Supabase project and copy `.env.example` to `.env.local`.
 2. Set `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`,
    and `NEXT_PUBLIC_SITE_URL` from your project and deployment.
-3. Apply both SQL migrations in timestamp order using the Supabase SQL Editor:
+3. Apply all SQL migrations in timestamp order using the Supabase SQL Editor:
    `supabase/migrations/20261022000000_create_user_workspaces.sql`, then
-   `supabase/migrations/20261022150000_add_group_sharing_and_invitations.sql`.
+   `supabase/migrations/20261022150000_add_group_sharing_and_invitations.sql`,
+   then
+   `supabase/migrations/20261022170000_add_normalized_database_schema.sql`.
    The second migration copies existing personal workspace groups into the
-   group-scoped schema.
+   shared-group schema. The third creates profile and normalized group,
+   membership, expense, split, and settlement tables and backfills them from
+   existing group documents.
 4. In Supabase Auth URL configuration, set the Site URL to your application
    origin. Allow `http://localhost:3000/**` for local development and
    `<site-url>/auth/callback**` for the deployed app.
@@ -57,13 +61,19 @@ Open [http://localhost:3000](http://localhost:3000) to view the application.
 
 The application uses the publishable key with the signed-in user's session;
 never add a service-role key to the application. PostgreSQL Row Level Security
-restricts each group to its accepted members. Group details, members, expenses,
-and settlements remain in a validated JSON document per group, while relational
-membership records control access. Updates are broadcast through Supabase
-Realtime; version checks reject stale writes instead of silently overwriting
-another member's changes. Invitation acceptance verifies that the signed-in
-account email matches the invitation. When Supabase isn't configured, the app
-stays in demo mode instead of attempting network writes.
+restricts each group to its accepted members. The existing `shared_groups`
+table remains the application write interface, with `groups`, `group_people`,
+`expenses`, `expense_splits`, and `settlements` maintained transactionally as
+normalized relational records. `group_members` maps authenticated accounts to
+their group member IDs. Profile rows are created from Auth users, and each user
+can read and update only their own profile. Normalized group records are
+read-only to clients; current writes continue through the authorized group
+write function, and each group’s JSON document remains validated. Updates are
+broadcast through Supabase Realtime; version checks reject stale writes instead
+of silently overwriting another member's changes. Invitation acceptance
+verifies that the signed-in account email matches the invitation. When Supabase
+isn't configured, the app stays in demo mode instead of attempting network
+writes.
 
 ## Architecture
 
