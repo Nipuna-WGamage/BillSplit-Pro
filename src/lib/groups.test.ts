@@ -66,7 +66,7 @@ describe("demo group operations", () => {
   });
 
   it("removes a regular member but protects the admin", () => {
-    const group = initialDemoGroups[0];
+    const group = { ...initialDemoGroups[0], expenses: [] };
     const removed = removeDemoGroupMember(group, "nimal-perera");
 
     expect(removed.success).toBe(true);
@@ -77,6 +77,13 @@ describe("demo group operations", () => {
     expect(removeDemoGroupMember(group, "nipun-perera")).toMatchObject({
       success: false,
       error: "The group admin cannot be removed.",
+    });
+  });
+
+  it("prevents removing a member referenced by an expense", () => {
+    expect(removeDemoGroupMember(initialDemoGroups[0], "nimal-perera")).toMatchObject({
+      success: false,
+      error: "This member is referenced by an expense. Remove or update those expenses first.",
     });
   });
 });

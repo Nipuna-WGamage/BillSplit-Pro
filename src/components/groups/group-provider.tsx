@@ -8,6 +8,12 @@ import {
   type ReactNode,
 } from "react";
 import {
+  createExpense as createDemoExpense,
+  deleteExpense as deleteDemoExpense,
+  updateExpense as updateDemoExpense,
+  type ExpenseInput,
+} from "@/lib/expenses";
+import {
   addDemoGroupMember,
   createDemoGroup,
   initialDemoGroups,
@@ -38,6 +44,19 @@ type GroupContextValue = {
   removeMember: (
     groupId: string,
     memberId: string,
+  ) => MutationResult<DemoGroup>;
+  createExpense: (
+    groupId: string,
+    input: ExpenseInput,
+  ) => MutationResult<DemoGroup>;
+  updateExpense: (
+    groupId: string,
+    expenseId: string,
+    input: ExpenseInput,
+  ) => MutationResult<DemoGroup>;
+  deleteExpense: (
+    groupId: string,
+    expenseId: string,
   ) => MutationResult<DemoGroup>;
 };
 
@@ -95,6 +114,82 @@ export function GroupProvider({ children }: { children: ReactNode }) {
         }
 
         return result;
+      },
+      createExpense(groupId, input) {
+        const group = groups.find((item) => item.id === groupId);
+
+        if (!group) {
+          return { success: false, error: "This group could not be found." };
+        }
+
+        const result = createDemoExpense(
+          input,
+          group.members.map((member) => member.id),
+        );
+
+        if (!result.success) {
+          return result;
+        }
+
+        const updatedGroup = {
+          ...group,
+          expenses: [...group.expenses, result.value],
+        };
+        setGroups((current) =>
+          current.map((item) => (item.id === groupId ? updatedGroup : item)),
+        );
+
+        return { success: true, value: updatedGroup };
+      },
+      updateExpense(groupId, expenseId, input) {
+        const group = groups.find((item) => item.id === groupId);
+
+        if (!group) {
+          return { success: false, error: "This group could not be found." };
+        }
+
+        const result = updateDemoExpense(
+          expenseId,
+          input,
+          group.members.map((member) => member.id),
+          group.expenses,
+        );
+
+        if (!result.success) {
+          return result;
+        }
+
+        const updatedGroup = {
+          ...group,
+          expenses: group.expenses.map((expense) =>
+            expenseId === expense.id ? result.value : expense,
+          ),
+        };
+        setGroups((current) =>
+          current.map((item) => (item.id === groupId ? updatedGroup : item)),
+        );
+
+        return { success: true, value: updatedGroup };
+      },
+      deleteExpense(groupId, expenseId) {
+        const group = groups.find((item) => item.id === groupId);
+
+        if (!group) {
+          return { success: false, error: "This group could not be found." };
+        }
+
+        const result = deleteDemoExpense(expenseId, group.expenses);
+
+        if (!result.success) {
+          return result;
+        }
+
+        const updatedGroup = { ...group, expenses: result.value };
+        setGroups((current) =>
+          current.map((item) => (item.id === groupId ? updatedGroup : item)),
+        );
+
+        return { success: true, value: updatedGroup };
       },
     }),
     [groups],

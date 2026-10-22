@@ -1,3 +1,5 @@
+import type { GroupExpense } from "./expenses";
+
 export type GroupCategory = "Household" | "Trip" | "Family" | "Other";
 
 export type GroupMember = {
@@ -13,8 +15,8 @@ export type DemoGroup = {
   category: GroupCategory;
   location: string;
   description: string;
-  monthlySpend: number;
   members: GroupMember[];
+  expenses: GroupExpense[];
 };
 
 export type MutationResult<T> =
@@ -28,12 +30,35 @@ export const initialDemoGroups: DemoGroup[] = [
     category: "Household",
     location: "Colombo 05",
     description: "Shared home expenses for the people under one roof.",
-    monthlySpend: 12640,
     members: [
       { id: "nipun-perera", name: "Nipun Perera", email: "nipun@example.test", role: "Admin" },
       { id: "nimal-perera", name: "Nimal Perera", email: "nimal@example.test", role: "Member" },
       { id: "amaya-bandara", name: "Amaya Bandara", email: "amaya@example.test", role: "Member" },
       { id: "kavi-silva", name: "Kavi Silva", email: "kavi@example.test", role: "Member" },
+    ],
+    expenses: [
+      {
+        id: "maple-groceries",
+        description: "Weekly groceries",
+        category: "Groceries",
+        amountMinor: 845000,
+        paidByMemberId: "nipun-perera",
+        date: "2026-10-22",
+        notes: "",
+        participantMemberIds: ["nipun-perera", "nimal-perera", "amaya-bandara", "kavi-silva"],
+        settled: false,
+      },
+      {
+        id: "maple-internet",
+        description: "Wi-Fi bill",
+        category: "Internet",
+        amountMinor: 419000,
+        paidByMemberId: "nimal-perera",
+        date: "2026-10-21",
+        notes: "October internet plan",
+        participantMemberIds: ["nipun-perera", "nimal-perera", "amaya-bandara", "kavi-silva"],
+        settled: false,
+      },
     ],
   },
   {
@@ -42,13 +67,36 @@ export const initialDemoGroups: DemoGroup[] = [
     category: "Trip",
     location: "Galle",
     description: "A shared pot for our next weekend away.",
-    monthlySpend: 8250,
     members: [
       { id: "nipun-beach", name: "Nipun Perera", email: "nipun@example.test", role: "Admin" },
       { id: "amaya-beach", name: "Amaya Bandara", email: "amaya@example.test", role: "Member" },
       { id: "nimal-beach", name: "Nimal Perera", email: "nimal@example.test", role: "Member" },
       { id: "kavi-beach", name: "Kavi Silva", email: "kavi@example.test", role: "Member" },
       { id: "sachini-beach", name: "Sachini Fernando", email: "sachini@example.test", role: "Member" },
+    ],
+    expenses: [
+      {
+        id: "beach-electricity",
+        description: "Villa electricity",
+        category: "Electricity",
+        amountMinor: 678000,
+        paidByMemberId: "amaya-beach",
+        date: "2026-10-18",
+        notes: "",
+        participantMemberIds: ["nipun-beach", "amaya-beach", "nimal-beach", "kavi-beach", "sachini-beach"],
+        settled: false,
+      },
+      {
+        id: "beach-taxi",
+        description: "Ride to the villa",
+        category: "Other",
+        amountMinor: 147000,
+        paidByMemberId: "nimal-beach",
+        date: "2026-10-18",
+        notes: "",
+        participantMemberIds: ["nipun-beach", "amaya-beach", "nimal-beach", "kavi-beach", "sachini-beach"],
+        settled: false,
+      },
     ],
   },
   {
@@ -57,11 +105,23 @@ export const initialDemoGroups: DemoGroup[] = [
     category: "Family",
     location: "Kandy",
     description: "Everyday shared costs with family.",
-    monthlySpend: 2100,
     members: [
       { id: "nipun-family", name: "Nipun Perera", email: "nipun@example.test", role: "Admin" },
       { id: "amma-perera", name: "Amma Perera", email: "amma@example.test", role: "Member" },
       { id: "tharindu-perera", name: "Tharindu Perera", email: "tharindu@example.test", role: "Member" },
+    ],
+    expenses: [
+      {
+        id: "family-water",
+        description: "Water bill",
+        category: "Water",
+        amountMinor: 210000,
+        paidByMemberId: "amma-perera",
+        date: "2026-10-17",
+        notes: "",
+        participantMemberIds: ["nipun-family", "amma-perera", "tharindu-perera"],
+        settled: false,
+      },
     ],
   },
 ];
@@ -114,7 +174,7 @@ export function createDemoGroup(
       category: input.category,
       location: input.location.trim(),
       description: "",
-      monthlySpend: 0,
+      expenses: [],
       members: [
         {
           id: `member-${id}-admin`,
@@ -178,6 +238,19 @@ export function removeDemoGroupMember(
 
   if (member.role === "Admin") {
     return { success: false, error: "The group admin cannot be removed." };
+  }
+
+  if (
+    group.expenses.some(
+      (expense) =>
+        expense.paidByMemberId === memberId ||
+        expense.participantMemberIds.includes(memberId),
+    )
+  ) {
+    return {
+      success: false,
+      error: "This member is referenced by an expense. Remove or update those expenses first.",
+    };
   }
 
   return {

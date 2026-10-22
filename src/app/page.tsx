@@ -3,6 +3,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { useGroups } from "@/components/groups/group-provider";
+import { formatLkr } from "@/lib/expenses";
 
 type IconName =
   | "activity"
@@ -123,36 +124,6 @@ const navigation = [
   { label: "Balances", href: "#balances", icon: "wallet" },
 ] as const;
 
-const expenses = [
-  {
-    title: "Weekly groceries",
-    group: "Maple House",
-    person: "You paid",
-    amount: "LKR 8,450",
-    initials: "MG",
-    color: "mint",
-    date: "Today",
-  },
-  {
-    title: "Wi-Fi bill",
-    group: "Maple House",
-    person: "Paid by Nimal",
-    amount: "LKR 3,200",
-    initials: "NP",
-    color: "lavender",
-    date: "Yesterday",
-  },
-  {
-    title: "Electricity",
-    group: "Beach Weekend",
-    person: "Paid by Amaya",
-    amount: "LKR 6,780",
-    initials: "AB",
-    color: "peach",
-    date: "Oct 18",
-  },
-];
-
 function BrandMark() {
   return (
     <span className="brand-mark" aria-hidden="true">
@@ -201,6 +172,22 @@ function AvatarStack() {
 
 export default function Home() {
   const { groups } = useGroups();
+  const allExpenses = groups.flatMap((group) =>
+    group.expenses.map((expense) => ({
+      ...expense,
+      groupName: group.name,
+      payerName:
+        group.members.find((member) => member.id === expense.paidByMemberId)?.name ??
+        "Group member",
+    })),
+  );
+  const recentExpenses = [...allExpenses]
+    .sort((first, second) => second.date.localeCompare(first.date))
+    .slice(0, 3);
+  const sharedSpendMinor = allExpenses.reduce(
+    (total, expense) => total + expense.amountMinor,
+    0,
+  );
 
   return (
     <div className="app-shell">
@@ -340,12 +327,12 @@ export default function Home() {
                 <span className="summary-icon icon-teal">
                   <Icon name="receipt" />
                 </span>
-                <span className="summary-label">Total shared spend</span>
+                <span className="summary-label">Total recorded expenses</span>
                 <span className="summary-menu" aria-hidden="true">···</span>
               </div>
-              <p className="summary-value summary-value-dark">LKR 48,760<span>.00</span></p>
+              <p className="summary-value summary-value-dark">{formatLkr(sharedSpendMinor)}</p>
               <div className="summary-foot">
-                <span className="summary-subtle">This month</span>
+                <span className="summary-subtle">Across demo groups</span>
                 <span className="mini-bars" aria-hidden="true">
                   <i /><i /><i /><i /><i /><i /><i /><i /><i />
                 </span>
@@ -387,19 +374,19 @@ export default function Home() {
                   <span>GROUP</span>
                   <span>AMOUNT</span>
                 </div>
-                {expenses.map((expense) => (
-                  <div className="activity-row" key={expense.title}>
+                {recentExpenses.map((expense) => (
+                  <div className="activity-row" key={expense.id}>
                     <div className="expense-cell">
-                      <span className={`expense-icon expense-icon-${expense.color}`}>
+                      <span className={`expense-icon expense-icon-${expense.category === "Internet" ? "lavender" : expense.category === "Electricity" ? "peach" : "mint"}`}>
                         <Icon name="receipt" />
                       </span>
                       <span className="expense-copy">
-                        <strong>{expense.title}</strong>
-                        <span>{expense.person} <i>·</i> {expense.date}</span>
+                        <strong>{expense.description}</strong>
+                        <span>{expense.payerName} <i>·</i> {expense.date}</span>
                       </span>
                     </div>
-                    <span className="group-cell">{expense.group}</span>
-                    <strong className="amount-cell">{expense.amount}</strong>
+                    <span className="group-cell">{expense.groupName}</span>
+                    <strong className="amount-cell">{formatLkr(expense.amountMinor)}</strong>
                   </div>
                 ))}
               </div>
@@ -491,7 +478,14 @@ export default function Home() {
                       <span>{group.members.length} {group.members.length === 1 ? "member" : "members"}</span>
                     </span>
                     <span className="group-amount">
-                      <strong>LKR {group.monthlySpend.toLocaleString("en-LK")}</strong>
+                      <strong>
+                        {formatLkr(
+                          group.expenses.reduce(
+                            (total, expense) => total + expense.amountMinor,
+                            0,
+                          ),
+                        )}
+                      </strong>
                       <span>this month</span>
                     </span>
                     <Icon className="group-chevron" name="arrowRight" />

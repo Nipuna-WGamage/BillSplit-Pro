@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState, type FormEvent } from "react";
+import { ExpenseManagement } from "./expense-management";
 import { useGroups } from "./group-provider";
 
 function initials(name: string): string {
@@ -168,7 +169,13 @@ export function GroupDetailPage({ groupId }: { groupId: string }) {
                 <div><dt>Group type</dt><dd>{group.category}</dd></div>
                 <div><dt>Location</dt><dd>{group.location || "Not set"}</dd></div>
                 <div><dt>Currency</dt><dd>LKR <span>Sri Lankan Rupee</span></dd></div>
-                <div><dt>Monthly demo spend</dt><dd>LKR {group.monthlySpend.toLocaleString("en-LK")}</dd></div>
+                <div>
+                  <dt>Demo expense total</dt>
+                  <dd>
+                    LKR {(group.expenses.reduce((total, expense) => total + expense.amountMinor, 0) / 100)
+                      .toLocaleString("en-LK", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </dd>
+                </div>
               </dl>
             </section>
 
@@ -207,6 +214,8 @@ export function GroupDetailPage({ groupId }: { groupId: string }) {
             </section>
           </aside>
         </div>
+
+        <ExpenseManagement groupId={group.id} />
 
         <footer className="page-footer groups-page-footer">
           <span>BillSplit Pro <span className="footer-dot">·</span> A clearer way to share.</span>
