@@ -11,6 +11,15 @@ const migration = readFileSync(
   ),
   "utf8",
 ).replace(/\r\n/g, "\n");
+const groupCreationPolicyMigration = readFileSync(
+  resolve(
+    process.cwd(),
+    "supabase",
+    "migrations",
+    "20261026120000_allow_group_owners_to_read_new_groups.sql",
+  ),
+  "utf8",
+).replace(/\r\n/g, "\n");
 
 describe("financial database write security migration", () => {
   it("validates stored group data before computing financial state", () => {
@@ -54,6 +63,21 @@ describe("financial database write security migration", () => {
     expect(migration).toContain("not public.is_group_member(p_group_id)");
     expect(migration).toContain(
       "current_group.updated_at is distinct from p_expected_updated_at",
+    );
+  });
+
+  it("allows a group owner to read the inserted row returned by group creation", () => {
+    expect(groupCreationPolicyMigration).toContain(
+      'drop policy if exists "Group members can read shared groups"',
+    );
+    expect(groupCreationPolicyMigration).toContain(
+      'create policy "Group members and owners can read shared groups"',
+    );
+    expect(groupCreationPolicyMigration).toContain(
+      "owner_id = (select auth.uid())",
+    );
+    expect(groupCreationPolicyMigration).toContain(
+      "or (select public.is_group_member(id))",
     );
   });
 

@@ -46,7 +46,8 @@ Open [http://localhost:3000](http://localhost:3000) to view the application.
    then
    `supabase/migrations/20261022170000_add_normalized_database_schema.sql`,
    then
-   `supabase/migrations/20261026100000_harden_financial_writes.sql`.
+   `supabase/migrations/20261026100000_harden_financial_writes.sql`, then
+   `supabase/migrations/20261026120000_allow_group_owners_to_read_new_groups.sql`.
    The second migration copies existing personal workspace groups into the
    shared-group schema. The third creates profile and normalized group,
    membership, expense, split, and settlement tables and backfills them from
@@ -88,6 +89,9 @@ The authorized write function locks the group row, verifies membership and the
 expected version, and applies normalized-table synchronization in the same
 transaction. Client roles cannot directly write normalized financial tables or
 execute internal validation/synchronization functions.
+Group owners can read their newly inserted group row while its owner membership
+is being created, allowing the creation response to return the saved version
+without broadening access to other users' groups.
 
 ## Architecture
 
