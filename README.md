@@ -44,7 +44,9 @@ Open [http://localhost:3000](http://localhost:3000) to view the application.
    `supabase/migrations/20261022000000_create_user_workspaces.sql`, then
    `supabase/migrations/20261022150000_add_group_sharing_and_invitations.sql`,
    then
-   `supabase/migrations/20261022170000_add_normalized_database_schema.sql`.
+   `supabase/migrations/20261022170000_add_normalized_database_schema.sql`,
+   then
+   `supabase/migrations/20261026100000_harden_financial_writes.sql`.
    The second migration copies existing personal workspace groups into the
    shared-group schema. The third creates profile and normalized group,
    membership, expense, split, and settlement tables and backfills them from
@@ -78,6 +80,14 @@ of silently overwriting another member's changes. Invitation acceptance
 verifies that the signed-in account email matches the invitation. When Supabase
 isn't configured, the app stays in demo mode instead of attempting network
 writes.
+
+The financial-write migration revalidates amounts and equal split allocations
+inside PostgreSQL, checks each settlement against the group's sequential
+outstanding balances, and protects settled expenses and settlement history.
+The authorized write function locks the group row, verifies membership and the
+expected version, and applies normalized-table synchronization in the same
+transaction. Client roles cannot directly write normalized financial tables or
+execute internal validation/synchronization functions.
 
 ## Architecture
 

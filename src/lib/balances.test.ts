@@ -44,6 +44,21 @@ describe("equal expense allocation", () => {
     expect(() => splitExpenseEqually(10, [])).toThrow(RangeError);
     expect(() => splitExpenseEqually(10, ["alice", "alice"])).toThrow(RangeError);
   });
+
+  it.each([
+    [1, ["alice", "bob", "cara"]],
+    [10, ["cara", "alice"]],
+    [101, ["cara", "bob", "alice"]],
+    [9007199254740991, ["alice"]],
+  ])("allocates %i minor units exactly", (amount, participantIds) => {
+    const shares = splitExpenseEqually(amount, participantIds);
+
+    expect(shares.reduce((total, share) => total + share.amountMinor, 0))
+      .toBe(amount);
+    expect(shares.map((share) => share.memberId)).toEqual(
+      [...participantIds].sort(),
+    );
+  });
 });
 
 describe("group balance calculation", () => {
@@ -105,6 +120,36 @@ describe("group balance calculation", () => {
       { memberId: "bob", balanceMinor: -56 },
       { memberId: "cara", balanceMinor: -66 },
     ]);
+  });
+
+  it("preserves a zero-sum balance after expenses and sequential settlements", () => {
+    const testExpenses = [
+      expense({ amountMinor: 101, participantMemberIds: ["alice", "bob", "cara"] }),
+      expense({
+        id: "expense-2",
+        amountMinor: 77,
+        paidByMemberId: "bob",
+        participantMemberIds: ["alice", "cara"],
+      }),
+    ];
+    const testSettlements: GroupSettlement[] = [
+      {
+        id: "settlement-1",
+        fromMemberId: "cara",
+        toMemberId: "bob",
+        amountMinor: 20,
+        date: "2026-10-20",
+        notes: "",
+      },
+    ];
+    const calculated = calculateGroupBalances(
+      members,
+      testExpenses,
+      testSettlements,
+    );
+
+    expect(calculated.reduce((total, balance) => total + balance.balanceMinor, 0))
+      .toBe(0);
   });
 
   it("rejects expenses with references outside the group", () => {
