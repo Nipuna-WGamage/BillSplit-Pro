@@ -6,11 +6,12 @@ import { signIn, signUp, type AuthFormState } from "@/app/auth/actions";
 
 type AuthFormProps = {
   mode: "login" | "signup";
+  isSupabaseConfigured: boolean;
 };
 
 const initialState: AuthFormState = {};
 
-export function AuthForm({ mode }: AuthFormProps) {
+export function AuthForm({ mode, isSupabaseConfigured }: AuthFormProps) {
   const action = mode === "login" ? signIn : signUp;
   const [state, formAction, pending] = useActionState(action, initialState);
   const isSignup = mode === "signup";
@@ -32,6 +33,13 @@ export function AuthForm({ mode }: AuthFormProps) {
             : "Sign in to access your saved groups and expenses."}
         </p>
 
+        {!isSupabaseConfigured ? (
+          <p className="form-error" role="alert">
+            Authentication is unavailable because Supabase is not configured.
+            Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+            to enable sign-in and account creation.
+          </p>
+        ) : null}
         {state.error ? <p className="form-error" role="alert">{state.error}</p> : null}
         {state.message ? <p className="form-success" role="status">{state.message}</p> : null}
 
@@ -50,7 +58,11 @@ export function AuthForm({ mode }: AuthFormProps) {
               type="password"
             />
           </label>
-          <button className="primary-action auth-submit" disabled={pending} type="submit">
+          <button
+            className="primary-action auth-submit"
+            disabled={pending || !isSupabaseConfigured}
+            type="submit"
+          >
             {pending
               ? "Please wait…"
               : isSignup

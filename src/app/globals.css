@@ -138,10 +138,18 @@ input:focus-visible {
 }
 
 .account-controls {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: flex-end;
   gap: 9px;
+}
+
+.account-mode-label {
+  color: #768278;
+  font-size: 9px;
+  font-weight: 650;
+  white-space: nowrap;
 }
 
 .account-email {
@@ -153,8 +161,12 @@ input:focus-visible {
   white-space: nowrap;
 }
 
-.account-controls button {
+.account-controls button,
+.account-link {
+  display: inline-flex;
   min-height: 30px;
+  align-items: center;
+  justify-content: center;
   border: 1px solid #e2e8e1;
   border-radius: 6px;
   background: #fff;
@@ -162,6 +174,12 @@ input:focus-visible {
   color: #526b57;
   font-size: 9px;
   cursor: pointer;
+}
+
+.account-link-primary {
+  border-color: #32744d;
+  background: #32744d;
+  color: #fff;
 }
 
 .account-controls button:disabled {
@@ -172,6 +190,55 @@ input:focus-visible {
 .account-controls [role="alert"] {
   color: #a34d3e;
   font-size: 8px;
+}
+
+.account-avatar-button {
+  width: auto;
+  min-height: 36px !important;
+  border: 0 !important;
+  border-radius: 18px !important;
+  padding: 2px 8px 2px 2px !important;
+  gap: 8px;
+}
+
+.account-trigger-email {
+  max-width: 170px;
+  overflow: hidden;
+  color: #6d7b70;
+  font-size: 9px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.account-avatar-button:focus-visible {
+  outline-offset: 3px;
+}
+
+.account-menu {
+  position: absolute;
+  z-index: 8;
+  top: calc(100% + 8px);
+  right: 0;
+  display: flex;
+  width: min(260px, calc(100vw - 32px));
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+  border: 1px solid #e5ebe4;
+  border-radius: 9px;
+  background: #fff;
+  padding: 12px;
+  box-shadow: 0 8px 24px rgb(35 55 39 / 12%);
+}
+
+.account-menu .account-email {
+  max-width: 100%;
+  font-size: 11px;
+}
+
+.account-menu button {
+  min-height: 36px;
+  font-size: 11px;
 }
 
 .auth-screen {
@@ -1664,6 +1731,24 @@ p {
     height: 29px;
   }
 
+  .account-controls {
+    gap: 5px;
+  }
+
+  .account-controls-signed-in {
+    margin-left: -3px;
+  }
+
+  .account-trigger-email {
+    display: none;
+  }
+
+  .account-link {
+    min-height: 30px;
+    padding: 0 6px;
+    font-size: 8px;
+  }
+
   .content {
     padding: 17px 15px 15px;
   }
@@ -1870,6 +1955,17 @@ p {
   .page-footer {
     padding-top: 16px;
     font-size: 7px;
+  }
+}
+
+@media (max-width: 380px) {
+  .topbar-actions {
+    gap: 5px;
+  }
+
+  .topbar-actions .search-box,
+  .topbar-actions .notification-button {
+    display: none;
   }
 }
 
