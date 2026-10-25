@@ -118,7 +118,7 @@ export function SettlementManagement({ groupId }: SettlementManagementProps) {
     setPendingDeleteId(null);
     setNotice(
       isSupabaseMode
-        ? "Settlement recorded and saved."
+        ? "Settlement saved and group balances updated."
         : "Settlement recorded in this demo.",
     );
   }
@@ -137,7 +137,7 @@ export function SettlementManagement({ groupId }: SettlementManagementProps) {
     setPendingDeleteId(null);
     setNotice(
       isSupabaseMode
-        ? "Settlement removed and balances recalculated."
+        ? "Settlement removed from the saved group; balances updated."
         : "Settlement removed from this demo and balances recalculated.",
     );
   }
@@ -152,11 +152,14 @@ export function SettlementManagement({ groupId }: SettlementManagementProps) {
           <p className="panel-kicker">RECORD A PAYMENT</p>
           <h2 id="settlement-title">Settlements</h2>
         </div>
-        <span className="group-category-pill">DEMO</span>
+        <span className="group-category-pill">
+          {isSupabaseMode ? "SAVED" : "DEMO"}
+        </span>
       </div>
       <p className="settlement-intro">
-        Record money paid between members to update outstanding balances. No
-        money is transferred by this demo.
+        {isSupabaseMode
+          ? "Record money paid between members to update shared group balances. No money is transferred by this app."
+          : "Record money paid between members to update outstanding balances. No money is transferred by this demo."}
       </p>
 
       {error ? <p className="form-error" role="alert">{error}</p> : null}
@@ -235,14 +238,18 @@ export function SettlementManagement({ groupId }: SettlementManagementProps) {
           disabled={owingMembers.length === 0 || recipientOptions.length === 0}
           type="submit"
         >
-          Record demo settlement
+          {isSupabaseMode ? "Record settlement" : "Record demo settlement"}
         </button>
       </form>
 
       <div className="settlement-history">
         <h3>Payment history <span className="member-count">{settlements.length}</span></h3>
         {settlements.length === 0 ? (
-          <p className="settlement-empty">No demo payments recorded yet.</p>
+          <p className="settlement-empty">
+            {isSupabaseMode
+              ? "No settlements recorded yet."
+              : "No demo payments recorded yet."}
+          </p>
         ) : (
           <ul className="settlement-list">
             {settlements.map((settlement) => {

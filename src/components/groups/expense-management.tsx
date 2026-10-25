@@ -91,8 +91,8 @@ export function ExpenseManagement({ groupId }: ExpenseManagementProps) {
     setNotice(
       isSupabaseMode
         ? editingExpenseId
-          ? "Expense updated and saved."
-          : "Expense added and saved."
+          ? "Expense changes saved to this group."
+          : "Expense saved to this group."
         : editingExpenseId
           ? "Expense updated in this demo."
           : "Expense added to this demo.",
@@ -175,7 +175,11 @@ export function ExpenseManagement({ groupId }: ExpenseManagementProps) {
         <div>
           <p className="panel-kicker">SHARED COSTS</p>
           <h2 id="expense-history-title">Expenses <span className="member-count">{activeGroup.expenses.length}</span></h2>
-          <p>Track who paid and who is included. Expense changes stay in this demo only.</p>
+          <p>
+            {isSupabaseMode
+              ? "Track who paid and who is included. Expenses are saved to this shared group."
+              : "Track who paid and who is included. Expense changes stay in this demo only."}
+          </p>
         </div>
         <span className="expense-currency-pill">LKR</span>
       </div>
@@ -187,7 +191,11 @@ export function ExpenseManagement({ groupId }: ExpenseManagementProps) {
         <div className="expense-empty">
           <span aria-hidden="true">▤</span>
           <strong>No expenses yet</strong>
-          <p>Add your first shared cost below to start this demo&apos;s history.</p>
+          <p>
+            {isSupabaseMode
+              ? "Add your first shared cost below to start this group's history."
+              : "Add your first shared cost below to start this demo&apos;s history."}
+          </p>
         </div>
       ) : (
         <div className="expense-history">
@@ -294,7 +302,11 @@ export function ExpenseManagement({ groupId }: ExpenseManagementProps) {
       <form aria-labelledby="expense-form-title" className="expense-form" onSubmit={handleSubmit}>
         <div className="expense-form-heading">
           <h3 id="expense-form-title">{editingExpenseId ? "Edit expense" : "Add an expense"}</h3>
-          <p>Only demo data is collected; no changes are saved to a database.</p>
+          <p>
+            {isSupabaseMode
+              ? "Changes are saved to this shared group."
+              : "Only demo data is collected; no changes are saved to a database."}
+          </p>
         </div>
 
         <div className="expense-form-grid">
@@ -398,7 +410,11 @@ export function ExpenseManagement({ groupId }: ExpenseManagementProps) {
               </button>
             ) : null}
             <button className="primary-action" type="submit">
-              {editingExpenseId ? "Save changes" : "Add demo expense"}
+              {editingExpenseId
+                ? "Save changes"
+                : isSupabaseMode
+                  ? "Save expense"
+                  : "Add demo expense"}
             </button>
           </div>
         </div>
