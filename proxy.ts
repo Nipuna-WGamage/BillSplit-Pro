@@ -43,9 +43,11 @@ export async function proxy(request: NextRequest) {
   const isAuthPage =
     request.nextUrl.pathname === "/login" ||
     request.nextUrl.pathname === "/signup";
+  const isPublicRecoveryPage =
+    request.nextUrl.pathname === "/forgot-password";
   const isCallback = request.nextUrl.pathname === "/auth/callback";
 
-  if (!isAuthenticated && !isAuthPage && !isCallback) {
+  if (!isAuthenticated && !isAuthPage && !isPublicRecoveryPage && !isCallback) {
     const redirectUrl = request.nextUrl.clone();
     redirectUrl.pathname = "/login";
     redirectUrl.searchParams.set("next", request.nextUrl.pathname);
