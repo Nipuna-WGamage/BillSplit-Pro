@@ -60,6 +60,16 @@ describe("home page", () => {
         .getByRole("link", { name: "Expenses" })
         .getAttribute("href"),
     ).toBe("#recent-activity");
+    expect(
+      within(screen.getByRole("navigation", { name: "Main navigation" }))
+        .getByRole("link", { name: "Settings" })
+        .getAttribute("href"),
+    ).toBe("/settings");
+    expect(
+      within(screen.getByRole("navigation", { name: "Mobile navigation" }))
+        .getByRole("link", { name: "Settings" })
+        .getAttribute("href"),
+    ).toBe("/settings");
   });
 
   it("labels the search field for assistive technology", () => {

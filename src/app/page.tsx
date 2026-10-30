@@ -126,6 +126,7 @@ const navigation = [
   { label: "Groups", href: "/groups", icon: "users" },
   { label: "Expenses", href: "#recent-activity", icon: "receipt" },
   { label: "Balances", href: "#balances", icon: "wallet" },
+  { label: "Settings", href: "/settings", icon: "settings" },
 ] as const;
 
 function BrandMark() {
@@ -303,10 +304,6 @@ export default function Home() {
           <a className="nav-link" href="#monthly-overview">
             <Icon className="nav-icon" name="activity" />
             <span>Monthly report</span>
-          </a>
-          <a className="nav-link" href="#settings">
-            <Icon className="nav-icon" name="settings" />
-            <span>Settings</span>
           </a>
           <div className="sidebar-divider" />
           <div className="profile">
